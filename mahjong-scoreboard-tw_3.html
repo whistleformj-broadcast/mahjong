@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>麻將直播記分板 — 台灣規則版</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+:root{
+  --felt:#0E3B2C; --felt-deep:#092A1F; --ivory:#F6F1E3; --ivory-side:#D9CFB4;
+  --gold:#D8A94E; --red:#C13B2E; --jade:#2E8B62; --ink:#22201A; --muted:#8A8674;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--felt);color:var(--ivory);min-height:100vh}
+body.greenscreen{background:#00FF00}
+body.greenscreen .topbar,body.greenscreen #controlView,body.greenscreen #historyView{display:none!important}
+
+.topbar{display:flex;align-items:center;gap:12px;padding:14px 20px;background:var(--felt-deep);border-bottom:2px solid rgba(216,169,78,.35);flex-wrap:wrap}
+.topbar h1{font-size:18px;font-weight:900;letter-spacing:2px;color:var(--gold)}
+#connBadge{font-size:12px;padding:4px 10px;border-radius:20px;background:rgba(0,0,0,.3);border:1px solid rgba(246,241,227,.2)}
+.tabs{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.tabs button{background:transparent;border:1px solid rgba(246,241,227,.3);color:var(--ivory);padding:8px 16px;border-radius:6px;font-family:inherit;font-size:14px;cursor:pointer}
+.tabs button.active{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:700}
+
+.wrap{max-width:980px;margin:0 auto;padding:20px}
+.panel{background:rgba(9,42,31,.6);border:1px solid rgba(216,169,78,.25);border-radius:10px;padding:18px;margin-bottom:16px}
+.panel h2{font-size:15px;color:var(--gold);letter-spacing:1px;margin-bottom:12px;font-weight:700}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+label{display:block;font-size:12px;color:rgba(246,241,227,.6);margin-bottom:4px}
+input,select{width:100%;padding:9px 10px;border-radius:6px;border:1px solid rgba(246,241,227,.25);background:rgba(0,0,0,.25);color:var(--ivory);font-family:inherit;font-size:15px}
+select option{color:#222}
+input:focus,select:focus{outline:2px solid var(--gold)}
+
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.btn{padding:10px 18px;border-radius:8px;border:none;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.btn-gold{background:var(--gold);color:var(--ink)}
+.btn-outline{background:transparent;border:1px solid rgba(246,241,227,.35);color:var(--ivory)}
+.btn-red{background:var(--red);color:#fff}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn:active{transform:scale(.97)}
+
+.choice{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.choice button{padding:12px 8px;border-radius:8px;border:1.5px solid rgba(246,241,227,.3);background:rgba(0,0,0,.2);color:var(--ivory);font-family:inherit;font-size:15px;font-weight:500;cursor:pointer;position:relative}
+.choice button.sel{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:900}
+.choice button:disabled{opacity:.25;cursor:not-allowed}
+.choice button .dz{display:inline-block;margin-left:5px;background:var(--red);color:#fff;font-size:11px;font-weight:900;padding:1px 6px;border-radius:4px;vertical-align:middle}
+.choice button.sel .dz{background:var(--red)}
+.steplabel{font-size:13px;color:rgba(246,241,227,.65);margin:14px 0 6px}
+.steplabel b{color:var(--gold)}
+
+.preview{margin-top:14px;padding:12px;border-radius:8px;background:rgba(216,169,78,.12);border:1px dashed rgba(216,169,78,.5);font-size:14px;line-height:1.7}
+.notice{padding:12px;border-radius:8px;background:rgba(46,139,98,.2);border:1px solid rgba(46,139,98,.5);font-size:14px;line-height:1.8;margin-bottom:14px}
+.notice .roundline{font-size:16px;font-weight:900;color:var(--gold);letter-spacing:1px}
+.jiangdone{padding:12px;border-radius:8px;background:rgba(216,169,78,.25);border:1px solid var(--gold);font-size:14px;font-weight:700;margin-bottom:14px;color:var(--gold)}
+.warn{padding:12px;border-radius:8px;background:rgba(193,59,46,.18);border:1px solid rgba(193,59,46,.55);font-size:14px;line-height:1.7;margin-bottom:14px}
+.warn code{background:rgba(0,0,0,.3);padding:1px 6px;border-radius:4px;font-size:13px}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:7px 8px;text-align:left;border-bottom:1px solid rgba(246,241,227,.12)}
+th{color:rgba(246,241,227,.55);font-weight:500;font-size:12px}
+td.win{color:var(--gold);font-weight:700}
+td.gun{color:#E8837A}
+td.pos{color:#7FD9AC;font-weight:700}
+td.neg{color:#E8837A;font-weight:700}
+td.round{white-space:nowrap;color:rgba(246,241,227,.75)}
+
+#overlayView{display:none;padding:28px 20px}
+/* ── 實況疊層版面 ── */
+#broadcast{position:relative;width:100%;min-height:78vh}
+body.greenscreen #broadcast{min-height:88vh}
+.bc-summary{position:absolute;top:0;left:0;background:rgba(9,20,15,.82);border:1px solid rgba(216,169,78,.5);border-radius:8px;overflow:hidden;backdrop-filter:blur(2px)}
+body.greenscreen .bc-summary{background:rgba(9,20,15,.94)}
+.bc-summary table{width:auto;border-collapse:collapse;font-size:15px}
+.bc-summary th{background:rgba(216,169,78,.9);color:#22201A;font-weight:900;padding:5px 12px;font-size:13px;letter-spacing:1px;text-align:center;border:none}
+.bc-summary td{padding:5px 12px;text-align:center;font-weight:700;border-bottom:1px solid rgba(246,241,227,.1);font-variant-numeric:tabular-nums;color:var(--ivory)}
+.bc-summary td.nm{text-align:left;font-weight:900;color:#fff}
+.bc-summary tr:last-child td{border-bottom:none}
+.bc-summary td.p{color:#7FD9AC}.bc-summary td.n{color:#E8837A}
+.bc-summary tr.lead td{background:rgba(216,169,78,.18)}
+
+.bc-title{position:absolute;top:0;right:0;text-align:right;background:linear-gradient(135deg,rgba(46,139,98,.9),rgba(9,42,31,.9));border:1px solid rgba(216,169,78,.6);border-radius:8px;padding:8px 18px}
+.bc-title .jn{font-size:28px;font-weight:900;color:var(--gold);letter-spacing:2px;line-height:1}
+.bc-title .jn small{font-size:14px;color:var(--ivory)}
+.bc-title .rd{font-size:13px;color:rgba(246,241,227,.85);margin-top:4px;letter-spacing:1px}
+
+.bc-corner{position:absolute;min-width:150px;background:rgba(9,20,15,.85);border-radius:10px;overflow:hidden;border:1px solid rgba(246,241,227,.25)}
+body.greenscreen .bc-corner{background:rgba(9,20,15,.95)}
+.bc-corner.dealer{border:2px solid var(--gold);box-shadow:0 0 16px rgba(216,169,78,.5)}
+.bc-corner .top{display:flex;align-items:stretch}
+.bc-corner .rk{background:rgba(0,0,0,.4);color:var(--ivory);padding:6px 10px;text-align:center;font-size:11px;font-weight:700;line-height:1.1;display:flex;flex-direction:column;justify-content:center}
+.bc-corner .rk b{font-size:20px;color:#fff;font-weight:900}
+.bc-corner .nm{flex:1;display:flex;align-items:center;padding:6px 12px;font-size:20px;font-weight:900;color:#fff;letter-spacing:1px}
+.bc-corner .dz{background:var(--red);color:#fff;font-size:11px;font-weight:900;padding:2px 7px;border-radius:4px;margin-left:8px}
+.bc-corner .bot{display:flex;align-items:center;gap:8px;padding:6px 12px;border-top:1px solid rgba(246,241,227,.15)}
+.bc-corner .wind{background:var(--red);color:#fff;font-size:18px;font-weight:900;width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.bc-corner .sc{font-size:26px;font-weight:900;font-variant-numeric:tabular-nums}
+.bc-corner .sc.p{color:#7FD9AC}.bc-corner .sc.n{color:#E8837A}
+.bc-corner.flash{animation:pop .6s ease}
+.c-north{top:64px;left:0}
+.c-west{top:96px;right:0}
+.c-east{bottom:80px;right:0}
+.c-south{bottom:0;left:0}
+.bc-hint{position:absolute;top:44%;left:50%;transform:translate(-50%,-50%);text-align:center;color:rgba(246,241,227,.8);font-size:18px;background:rgba(9,20,15,.8);padding:20px 30px;border-radius:12px;border:1px dashed rgba(216,169,78,.5)}
+body.greenscreen .bc-hint{display:none}
+/* ── 編輯位置模式 ── */
+body.editpos .bc-corner,body.editpos .bc-summary,body.editpos .bc-title{cursor:move;outline:2px dashed var(--gold);outline-offset:3px;transition:outline-color .2s}
+body.editpos .bc-corner:hover,body.editpos .bc-summary:hover,body.editpos .bc-title:hover{outline-color:#fff;outline-style:solid}
+body.editpos .bc-corner::after,body.editpos .bc-summary::after,body.editpos .bc-title::after{content:'✥ 拖曳';position:absolute;top:-22px;left:0;font-size:11px;color:var(--gold);background:rgba(9,20,15,.9);padding:2px 6px;border-radius:4px;white-space:nowrap;pointer-events:none}
+.editpos-bar{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:50;background:rgba(9,20,15,.95);border:1px solid var(--gold);border-radius:10px;padding:10px 16px;display:none;align-items:center;gap:12px;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+body.editpos .editpos-bar{display:flex}
+.editpos-bar b{color:var(--gold)}
+/* ── 自動輪播 / 螢幕保護 ── */
+#cardsLayout{position:relative;overflow:hidden}
+#ssAmbient{display:none}
+body.slideshow #ssAmbient{display:block;position:absolute;inset:-20%;z-index:0;pointer-events:none;
+  background:radial-gradient(circle at 30% 30%,rgba(216,169,78,.10),transparent 45%),radial-gradient(circle at 70% 70%,rgba(46,139,98,.12),transparent 45%);
+  animation:ssDrift 24s ease-in-out infinite alternate}
+@keyframes ssDrift{0%{transform:translate(-3%,-2%) scale(1.05)}100%{transform:translate(3%,2%) scale(1.12)}}
+body.greenscreen #ssAmbient{display:none!important}
+#cardsLayout .ov-head,#cardsLayout .tiles,#cardsLayout .ov-foot{position:relative;z-index:1}
+/* 淡入切換 */
+body.slideshow #cardsLayout .tiles{animation:slideIn .7s ease}
+body.slideshow #cardsLayout .ov-head{animation:slideIn .7s ease}
+@keyframes slideIn{0%{opacity:0;transform:translateY(14px)}100%{opacity:1;transform:translateY(0)}}
+/* 輪播時卡片輕微飄動(螢保感)*/
+body.slideshow .tile{animation:slideIn .7s ease, floaty 6s ease-in-out infinite}
+body.slideshow .tile:nth-child(2){animation-delay:0s,.6s}
+body.slideshow .tile:nth-child(3){animation-delay:0s,1.2s}
+body.slideshow .tile:nth-child(4){animation-delay:0s,1.8s}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+/* 輪播指示 pill(綠幕時隱藏)*/
+.ss-pill{display:none;position:absolute;top:14px;right:18px;z-index:2;font-size:13px;font-weight:700;color:var(--gold);background:rgba(9,20,15,.7);border:1px solid rgba(216,169,78,.5);padding:5px 12px;border-radius:20px}
+/* ── 總累積排行榜(表格式)── */
+.lb-wrap{grid-column:1/-1;display:flex;gap:18px;width:100%;max-width:1700px;margin:0 auto;align-items:flex-start}
+.lb-col{flex:1;min-width:0}
+.lb-table{width:100%;border-collapse:collapse;font-size:16px;background:rgba(6,10,8,.9);border-radius:10px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.4)}
+.lb-table th{background:rgba(255,255,255,.05);color:rgba(246,241,227,.65);font-weight:700;font-size:13px;padding:9px 6px;text-align:center;border-bottom:1px solid rgba(246,241,227,.18);letter-spacing:1px}
+.lb-table td{padding:9px 6px;text-align:center;border-bottom:1px solid rgba(246,241,227,.07);font-variant-numeric:tabular-nums;color:var(--ivory)}
+.lb-table tbody tr:last-child td{border-bottom:none}
+.lb-table td.nm{text-align:left;font-weight:900;padding-left:14px;color:#8FD0FF}
+.lb-table td.rk{font-weight:900;font-size:15px;width:56px}
+.lb-table td.sc{font-weight:900;font-size:17px}
+.lb-table tr.up{background:rgba(193,59,46,.32)}    /* 台灣慣例:紅=今日上升 */
+.lb-table tr.up td.nm{color:#FFB4AC}
+.lb-table tr.down{background:rgba(46,139,98,.32)}  /* 綠=今日下降 */
+.lb-table tr.down td.nm{color:#9FE6C2}
+.lb-table td .dl{font-size:13px;font-weight:700;opacity:.9;margin-left:3px}
+body.greenscreen .lb-table{background:rgba(6,10,8,.96)}
+body.slideshow .ss-pill{display:block;animation:pillPulse 2s ease-in-out infinite}
+body.greenscreen .ss-pill{display:none!important}
+@keyframes pillPulse{0%,100%{opacity:.55}50%{opacity:1}}
+#slideSec{width:auto;display:inline-block;padding:7px 8px;font-size:12px}
+#historyView{display:none}
+.ov-head{text-align:center;margin-bottom:20px}
+.ov-head .title{font-size:22px;font-weight:900;letter-spacing:6px;color:var(--gold)}
+.ov-head .sub{font-size:14px;color:rgba(246,241,227,.75);letter-spacing:2px;margin-top:6px;font-weight:700}
+body.greenscreen .ov-head .title{text-shadow:0 2px 0 #043}
+body.greenscreen .ov-head .sub{color:#043;font-weight:900}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;max-width:1100px;margin:0 auto}
+.tile{background:var(--ivory);border-radius:14px;padding:16px 14px 12px;color:var(--ink);position:relative;box-shadow:0 6px 0 var(--ivory-side),0 10px 18px rgba(0,0,0,.35);border:1px solid #fff}
+.tile .rank{position:absolute;top:-10px;left:12px;background:var(--jade);color:#fff;font-size:12px;font-weight:900;padding:3px 10px;border-radius:20px;letter-spacing:1px}
+.tile.leader .rank{background:var(--red)}
+.tile.leader{outline:3px solid var(--gold);outline-offset:2px}
+.tile .dealer{position:absolute;top:-10px;right:12px;background:var(--red);color:#fff;font-size:12px;font-weight:900;padding:3px 10px;border-radius:20px;letter-spacing:1px}
+.tile .pname{font-size:17px;font-weight:900;margin-bottom:2px;letter-spacing:1px}
+.tile .seatwind{font-size:11px;color:#8A8264;font-weight:700;margin-bottom:2px}
+.tile .score{font-size:38px;font-weight:900;line-height:1.15;font-variant-numeric:tabular-nums}
+.tile .score.neg{color:var(--red)}
+.tile .score.pos{color:var(--jade)}
+.tile .stats{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.tile .stats span{font-size:12px;font-weight:700;padding:3px 8px;border-radius:5px;background:#EEE7D2;color:#5A5442}
+.tile .stats .s-zimo{background:#DCEEE3;color:#1E5C41}
+.tile .stats .s-gun{background:#F6DBD7;color:#8C2A20}
+.tile .life{margin-top:10px;padding-top:8px;border-top:1px dashed #D8CEB2;font-size:12px;color:#6B6551;display:flex;justify-content:space-between}
+.tile .life b{color:#22201A}
+.tile.offseat{opacity:.82}
+.tile.offseat .seatwind{color:#B0A986;background:#EDE6D2;border-radius:4px;padding:1px 6px;display:inline-block}
+.tile.flash{animation:pop .6s ease}
+@keyframes pop{0%{transform:scale(1)}35%{transform:scale(1.06)}100%{transform:scale(1)}}
+
+.ov-foot{text-align:center;margin-top:18px;font-size:13px;color:rgba(246,241,227,.55);letter-spacing:1px}
+body.greenscreen .ov-foot{display:none}
+.ov-tools{position:fixed;bottom:14px;right:14px;display:flex;gap:8px;opacity:.25;transition:opacity .2s;flex-wrap:wrap}
+.ov-tools:hover{opacity:1}
+.ov-tools .btn{font-size:12px;padding:7px 12px}
+
+.roster{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.25);border:1px solid rgba(246,241,227,.25);border-radius:20px;padding:6px 6px 6px 14px;font-size:14px}
+.chip button{background:none;border:none;color:#E8837A;cursor:pointer;font-size:15px;font-weight:900;padding:0 6px}
+@media (max-width:640px){.tile .score{font-size:30px}}
+/* ── 畫面內確認視窗 & 提示 ── */
+#uiModal{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center}
+.uim-back{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+.uim-box{position:relative;background:#0F2A20;border:1px solid var(--gold);border-radius:12px;padding:22px 24px;max-width:380px;width:90%;box-shadow:0 12px 40px rgba(0,0,0,.6)}
+.uim-msg{font-size:15px;line-height:1.7;color:var(--ivory);margin-bottom:18px}
+.uim-btns{display:flex;gap:10px;justify-content:flex-end}
+#uiToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{background:rgba(9,20,15,.95);border:1px solid var(--gold);color:var(--ivory);padding:10px 18px;border-radius:8px;font-size:14px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.5);animation:toastIn .25s ease}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🀄 麻將直播記分板</h1>
+  <span id="connBadge">⚪ 初始化中…</span>
+  <div class="tabs">
+    <button id="tabControl" class="active" onclick="showView('control')">本場控制台</button>
+    <button id="tabHistory" onclick="showView('history')">玩家與歷史</button>
+    <button id="tabOverlay" onclick="showView('overlay')">直播畫面</button>
+  </div>
+</div>
+
+<!-- ═══════════ 控制台 ═══════════ -->
+<div id="controlView" class="wrap">
+
+  <div class="warn" id="setupWarn" style="display:none">
+    ⚠️ <b>尚未設定 Firebase</b>,目前資料只存在這台裝置(localStorage 模式)。<br>
+    設定方式:用文字編輯器打開這個 HTML 檔,找到最上方 <code>firebaseConfig</code> 區塊,貼上你 Firebase 專案的設定值後存檔即可。詳細步驟見檔案內註解。
+  </div>
+
+  <div class="panel" id="newSessionPanel">
+    <h2>開新牌局(一將 = 東南西北四圈,每圈東南西北四風,至少 16 把)</h2>
+    <div class="grid4">
+      <div><label>日期</label><input id="sDate" type="date"></div>
+      <div><label>底(分)</label><input id="sBase" type="number" value="5"></div>
+      <div><label>每台(分)</label><input id="sPerTai" type="number" value="1"></div>
+    </div>
+    <div class="steplabel">選擇四位玩家與座位(名冊沒有的先到「玩家與歷史」新增)</div>
+    <div class="grid4">
+      <div><label>東風位</label><select id="seat0"></select></div>
+      <div><label>南風位</label><select id="seat1"></select></div>
+      <div><label>西風位</label><select id="seat2"></select></div>
+      <div><label>北風位</label><select id="seat3"></select></div>
+    </div>
+    <div class="steplabel">起莊(第一把由哪個位置做莊,一般為東風位)</div>
+    <div class="grid4">
+      <div><select id="startDealer">
+        <option value="0" selected>東風位起莊</option>
+        <option value="1">南風位起莊</option>
+        <option value="2">西風位起莊</option>
+        <option value="3">北風位起莊</option>
+      </select></div>
+    </div>
+    <div class="btnrow"><button class="btn btn-gold" onclick="startSession()">開始牌局 ▶</button></div>
+  </div>
+
+  <div id="activeSessionArea" style="display:none">
+    <div class="jiangdone" id="jiangDone" style="display:none"></div>
+    <div class="notice" id="sessionInfo"></div>
+
+    <!-- 每將開始前的座位設定(換人 / 輪座位)-->
+    <div class="panel" id="reseatPanel" style="display:none;border-color:var(--gold)">
+      <h2 id="reseatTitle">設定座位</h2>
+      <div style="font-size:13px;color:rgba(246,241,227,.7);line-height:1.7;margin-bottom:12px">重新指定這一將的東南西北。留在桌上的人分數繼續累積;換上的新人從目前分數接手(新加入者為 0);換下的人分數封存保留。東家為這一將的起莊。</div>
+      <div class="grid4">
+        <div><label>東風位</label><select id="rs0"></select></div>
+        <div><label>南風位</label><select id="rs1"></select></div>
+        <div><label>西風位</label><select id="rs2"></select></div>
+        <div><label>北風位</label><select id="rs3"></select></div>
+      </div>
+      <div class="steplabel">起莊(這一將第一把由哪個位置做莊)</div>
+      <div class="grid4">
+        <div><select id="rsDealer">
+          <option value="0" selected>東風位起莊</option>
+          <option value="1">南風位起莊</option>
+          <option value="2">西風位起莊</option>
+          <option value="3">北風位起莊</option>
+        </select></div>
+      </div>
+      <div class="btnrow">
+        <button class="btn btn-gold" onclick="confirmReseat()">✓ 開始這一將</button>
+        <button class="btn btn-outline" onclick="fillReseatKeep()">維持原班原位</button>
+        <button class="btn btn-red" onclick="endSession()">結束本場並歸檔 ■</button>
+      </div>
+    </div>
+
+    <div class="panel" id="recordPanel">
+      <h2>記錄這一把</h2>
+      <div class="steplabel"><b>1</b>・誰胡牌?(紅色「莊」= 本把莊家)</div>
+      <div class="choice" id="winnerChoice"></div>
+      <div class="steplabel"><b>2</b>・胡牌方式</div>
+      <div class="choice" id="typeChoice">
+        <button data-t="zimo" onclick="pickType('zimo')">自摸</button>
+        <button data-t="ron" onclick="pickType('ron')">胡牌(放槍)</button>
+        <button data-t="draw" onclick="pickType('draw')">流局(莊家連莊)</button>
+      </div>
+      <div class="steplabel" id="gunLabel" style="display:none"><b>3</b>・誰放槍?</div>
+      <div class="choice" id="gunChoice" style="display:none"></div>
+      <div class="steplabel" id="taiLabel"><b>3</b>・牌面幾台?(含自摸台,莊家台與連莊台系統自動加)</div>
+      <div class="grid4" id="taiRow"><div><input id="tai" type="number" value="1" min="0"></div></div>
+      <div class="preview" id="preview">請選擇胡牌玩家</div>
+      <div class="btnrow">
+        <button class="btn btn-gold" id="confirmBtn" onclick="confirmHand()" disabled>確認記錄 ✓</button>
+        <button class="btn btn-outline" onclick="undoHand()">刪除上一把</button>
+        <button class="btn btn-red" onclick="endSession()">結束本場並歸檔 ■</button>
+      </div>
+    </div>
+
+    <div class="panel" id="penaltyPanel">
+      <h2>喊碰不碰・罰點</h2>
+      <div style="font-size:13px;color:rgba(246,241,227,.7);line-height:1.6;margin-bottom:10px">喊碰的人反悔沒碰 → 賠給出牌的人 1 點。每把可重複記錄。</div>
+      <div class="grid4">
+        <div><label>喊碰的人(賠 1 點)</label><select id="penCaller"></select></div>
+        <div><label>出牌的人(得 1 點)</label><select id="penDiscarder"></select></div>
+      </div>
+      <div class="btnrow">
+        <button class="btn btn-red" onclick="addPenalty()">＋ 記一筆(賠 1 點)</button>
+        <button class="btn btn-outline" onclick="undoPenalty()">刪除上一筆罰點</button>
+      </div>
+      <div id="penList" style="font-size:13px;color:rgba(246,241,227,.65);margin-top:8px"></div>
+    </div>
+
+    <div class="panel">
+      <h2>本場歷史</h2>
+      <table>
+        <thead><tr><th>局</th><th>莊家</th><th>胡牌</th><th>方式</th><th>總台數</th><th>放槍</th><th>贏分</th></tr></thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 玩家與歷史 ═══════════ -->
+<div id="historyView" class="wrap">
+
+  <div class="panel">
+    <h2>玩家名冊</h2>
+    <div class="roster" id="rosterList"></div>
+    <div class="btnrow">
+      <input id="newPlayerName" placeholder="輸入新玩家名字" style="max-width:220px">
+      <button class="btn btn-gold" onclick="addPlayer()">＋ 新增玩家</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>累積總戰績(所有牌局)</h2>
+    <table>
+      <thead><tr><th>排名</th><th>玩家</th><th>場數</th><th>累積總分</th><th>自摸</th><th>胡牌</th><th>放槍</th><th>場均</th></tr></thead>
+      <tbody id="lifetimeBody"></tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h2>歷史牌局</h2>
+    <table>
+      <thead><tr><th>日期</th><th>玩家與結果</th><th>把數</th><th></th></tr></thead>
+      <tbody id="sessionsBody"></tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h2>資料備份</h2>
+    <div style="font-size:13px;color:rgba(246,241,227,.6);line-height:1.6" id="backupHint"></div>
+    <div class="btnrow">
+      <button class="btn btn-gold" onclick="exportData()">匯出備份 ⬇</button>
+      <button class="btn btn-outline" onclick="document.getElementById('importFile').click()">匯入備份 ⬆</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)">
+      <button class="btn btn-red" onclick="wipeAll()">清空全部資料</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 直播畫面(實況疊層版面)═══════════ -->
+<div id="overlayView">
+  <div id="broadcast">
+    <!-- 左上:當日總結表 -->
+    <div class="bc-summary" id="bcSummary"></div>
+    <!-- 右上:將數/主題徽章 -->
+    <div class="bc-title" id="bcTitle"></div>
+    <!-- 四角座位小卡 -->
+    <div class="bc-corner c-north" id="cornerN"></div>
+    <div class="bc-corner c-west"  id="cornerW"></div>
+    <div class="bc-corner c-east"  id="cornerE"></div>
+    <div class="bc-corner c-south" id="cornerS"></div>
+    <!-- 中央提示(僅在無進行中牌局時顯示)-->
+    <div class="bc-hint" id="bcHint"></div>
+  </div>
+  <div class="editpos-bar">
+    <span><b>編輯位置模式</b>・直接拖曳表格或小卡到想要的位置</span>
+    <button class="btn btn-outline btn-sm" onclick="resetPositions()">回復預設</button>
+    <button class="btn btn-gold btn-sm" onclick="toggleEditPos()">完成 ✓</button>
+  </div>
+  <div class="ov-tools">
+    <button class="btn btn-outline" onclick="manualView('broadcast')">實況版面</button>
+    <button class="btn btn-outline" id="editPosBtn" onclick="toggleEditPos()">✥ 編輯位置</button>
+    <button class="btn btn-outline" onclick="manualView('cards','today')">今日大卡</button>
+    <button class="btn btn-outline" onclick="manualView('cards','lifetime')">總累積榜</button>
+    <button class="btn btn-gold" id="slideshowBtn" onclick="toggleSlideshow()">▶ 自動輪播</button>
+    <select id="slideSec" onchange="if(slideshow){startSlideshow()}" title="每張秒數">
+      <option value="6000">6 秒</option>
+      <option value="8000" selected>8 秒</option>
+      <option value="12000">12 秒</option>
+      <option value="20000">20 秒</option>
+    </select>
+    <button class="btn btn-outline" onclick="toggleGreen()">綠幕模式</button>
+    <button class="btn btn-outline" onclick="showView('control')">返回控制台</button>
+  </div>
+  <!-- 大卡版面(今日 / 總累積,亦作輪播螢保)-->
+  <div id="cardsLayout" style="display:none">
+    <div id="ssAmbient"></div>
+    <div class="ov-head">
+      <div class="title" id="ovTitle">即時比分</div>
+      <div class="sub" id="ovRound"></div>
+    </div>
+    <div class="tiles" id="tiles"></div>
+    <div class="ov-foot" id="ovFoot">自摸三家付・放槍一家付・莊家1台+連N拉N・下排為歷史累積戰績</div>
+    <div class="ss-pill" id="ssPill">● 自動輪播中</div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   ★★★ Firebase 設定 — 唯一需要你動手改的地方 ★★★
+
+   設定步驟(一次就好,約 5 分鐘):
+   1. 到 https://console.firebase.google.com 建立專案(名稱隨意)
+   2. 左側「建構 Build」→「Realtime Database」→ 建立資料庫
+      → 位置選 asia-southeast1(新加坡,離台灣最近)→ 先選「鎖定模式」
+   3. 資料庫「規則 Rules」分頁貼上以下規則後發布:
+        {
+          "rules": {
+            "rooms": {
+              ".read": "auth != null",
+              ".write": "auth != null"
+            }
+          }
+        }
+   4. 左側「建構」→「Authentication」→「登入方式」→ 啟用「匿名 Anonymous」
+   5. 專案設定(左上齒輪)→「一般」→ 底部「你的應用程式」
+      → 新增「網頁應用程式 </>」→ 複製 firebaseConfig 的值貼到下面
+   6. ROOM_ID 改成一串別人猜不到的字(它就是你的頻道密碼,
+      所有要同步的裝置都要用同一個 ROOM_ID)
+   ═══════════════════════════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey: "AIzaSyDtdbutDjabe9FDj9Z5HXQkj5m1NAtXj6I",
+  authDomain: "live-mjbroadcast2026.firebaseapp.com",
+  databaseURL: "https://live-mjbroadcast2026-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "live-mjbroadcast2026",
+  storageBucket: "live-mjbroadcast2026.firebasestorage.app",
+  messagingSenderId: "993789032431",
+  appId: "1:993789032431:web:41480070253c3c2cf5281a"
+};
+const ROOM_ID = "howard-mj-room-2026";
+/* ═══════════════════════════════════════════════════════════════ */
+
+const KEY='mj_league_v2';
+const WINDS=['東','南','西','北'];
+let db={roster:[],sessions:[],currentId:null};
+let cur={winner:null,type:null,gun:null};
+let ovMode='today';
+let ovLayout='broadcast';
+let slideshow=false;      // 自動輪播開關
+let slideTimer=null;      // 輪播計時器
+let slideSeq=[];          // 目前輪播序列
+let slideIdx=0;           // 目前第幾張
+let slideshowAuto=false;  // 是否為『選位子階段』自動觸發的輪播
+let fbRef=null, fbReady=false, applyingRemote=false;
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+/* ── 畫面內確認/提示(取代原生 confirm/alert)── */
+function uiConfirm(msg,okText,cancelText){
+  return new Promise(res=>{
+    const m=document.getElementById('uiModal');
+    document.getElementById('uimMsg').innerHTML=msg;
+    const btns=document.getElementById('uimBtns');
+    btns.innerHTML='';
+    const cancel=document.createElement('button');
+    cancel.className='btn btn-outline';cancel.textContent=cancelText||'取消';
+    cancel.onclick=()=>{m.style.display='none';res(false)};
+    const ok=document.createElement('button');
+    ok.className='btn btn-gold';ok.textContent=okText||'確定';
+    ok.onclick=()=>{m.style.display='none';res(true)};
+    btns.appendChild(cancel);btns.appendChild(ok);
+    m.style.display='flex';
+  });
+}
+function toast(msg){
+  const wrap=document.getElementById('uiToast');
+  const el=document.createElement('div');el.className='toast';el.textContent=msg;
+  wrap.appendChild(el);
+  setTimeout(()=>{el.style.transition='opacity .3s';el.style.opacity='0';setTimeout(()=>el.remove(),300)},2200);
+}
+function normalize(d){
+  d=d||{};
+  d.roster=Array.isArray(d.roster)?d.roster:Object.values(d.roster||{});
+  d.sessions=Array.isArray(d.sessions)?d.sessions:Object.values(d.sessions||{});
+  d.sessions.forEach(s=>{
+    s.seats=s.seats||[];
+    s.hands=Array.isArray(s.hands)?s.hands:Object.values(s.hands||{});
+    s.startDealer=s.startDealer||0;
+    s.penalties=Array.isArray(s.penalties)?s.penalties:Object.values(s.penalties||{});
+    // 座位表正規化 → jiang-keyed
+    s.seatings=Array.isArray(s.seatings)?s.seatings:Object.values(s.seatings||{});
+    s.seatings.forEach(x=>{x.seats=Array.isArray(x.seats)?x.seats:Object.values(x.seats||{})});
+    if(!s.seatings.length){
+      // 由 seats(+舊 subs)建立;第 1 將 = 開局座位,舊 subs 併入其所在的將
+      let seatings=[{jiang:1,seats:[...(s.seats||[])]}];
+      const oldSubs=Array.isArray(s.subs)?s.subs:Object.values(s.subs||{});
+      if(oldSubs.length){
+        // 先算每把的 passes,才能判斷 sub 落在第幾將
+        let dealer=s.startDealer||0,streak=0,passes=0;const passAt=[];
+        (s.hands||[]).forEach(h=>{passAt.push(passes);if(h.type==='draw'||h.winner===dealer){streak++}else{streak=0;dealer=(dealer+1)%4;passes++}});
+        let running=[...(s.seats||[])];
+        oldSubs.slice().sort((a,b)=>a.atHand-b.atHand).forEach(x=>{
+          running[x.seat]=x.playerId;
+          const ji=Math.floor((passAt[x.atHand]!==undefined?passAt[x.atHand]:passes)/16)+1;
+          const ex=seatings.find(z=>z.jiang===ji);
+          if(ex)ex.seats=[...running];else seatings.push({jiang:ji,seats:[...running]});
+        });
+      }
+      s.seatings=seatings;
+    }else if(s.seatings.some(x=>x.jiang===undefined&&x.atHand!==undefined)){
+      // 若殘留 atHand-keyed(理論上不會持久化),就地換算成 jiang
+      let dealer=s.startDealer||0,streak=0,passes=0;const passAt=[];
+      (s.hands||[]).forEach(h=>{passAt.push(passes);if(h.type==='draw'||h.winner===dealer){streak++}else{streak=0;dealer=(dealer+1)%4;passes++}});
+      s.seatings.forEach(x=>{if(x.jiang===undefined){const p=passAt[x.atHand]!==undefined?passAt[x.atHand]:0;x.jiang=Math.floor(p/16)+1}});
+    }
+    delete s.subs;
+  });
+  d.currentId=d.currentId||null;
+  return d;
+}
+function setBadge(txt,color){const b=document.getElementById('connBadge');b.textContent=txt;b.style.borderColor=color;b.style.color=color}
+
+/* ── 初始化 ── */
+function initStore(){
+  const configured=firebaseConfig.apiKey&&firebaseConfig.databaseURL;
+  if(!configured){
+    document.getElementById('setupWarn').style.display='block';
+    document.getElementById('backupHint').textContent='目前為單機模式,資料存在這台裝置的瀏覽器。建議定期匯出 JSON 備份。';
+    setBadge('🟡 單機模式(未接 Firebase)','#D8A94E');
+    try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.roster)db=normalize(s)}catch(e){}
+    if(maybeRescale()){save();}else{render();}
+    return;
+  }
+  document.getElementById('backupHint').textContent='資料已存雲端,所有裝置即時同步。匯出 JSON 可作額外備份或搬家用。';
+  setBadge('⚪ 連線中…','#aaa');
+  // 先確認 Firebase SDK 有載入(常見:被廣告攔截器/瀏覽器擋掉 gstatic,或沒網路)
+  if(typeof firebase==='undefined'||!firebase.initializeApp){
+    setBadge('🔴 Firebase SDK 未載入(被瀏覽器/擴充功能或網路擋住 gstatic)','#E8837A');
+    document.getElementById('setupWarn').style.display='block';
+    document.getElementById('setupWarn').innerHTML='⚠️ <b>Firebase SDK 沒載入成功</b>。多半是廣告攔截器 / Brave Shields / 隱私擴充功能擋掉了 <code>gstatic.com</code>,或這台電腦沒網路。<br>請試:關掉該分頁的攔截器後重新整理,或換一個瀏覽器(Chrome 無擴充)開這個檔案。';
+    try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.roster)db=normalize(s)}catch(e){}
+    if(maybeRescale()){save();}else{render();}
+    return;
+  }
+  try{
+    firebase.initializeApp(firebaseConfig);
+    firebase.auth().signInAnonymously().catch(e=>{
+      setBadge('🔴 登入失敗:請確認已啟用匿名登入','#E8837A');console.error(e);
+    });
+    firebase.auth().onAuthStateChanged(user=>{
+      if(!user)return;
+      fbRef=firebase.database().ref('rooms/'+ROOM_ID);
+      fbRef.on('value',snap=>{
+        fbReady=true;
+        applyingRemote=true;
+        db=normalize(snap.val());
+        applyingRemote=false;
+        localStorage.setItem(KEY,JSON.stringify(db));
+        if(maybeRescale()){save();toast&&toast('✓ 分數已換算為底5/台1');}
+        render();flashOverlay();
+      },err=>{
+        setBadge('🔴 讀取失敗:請檢查資料庫規則','#E8837A');console.error(err);
+      });
+      firebase.database().ref('.info/connected').on('value',s=>{
+        if(s.val())setBadge('🟢 雲端已連線・房間 '+ROOM_ID,'#7FD9AC');
+        else if(fbReady)setBadge('🟡 離線中,恢復連線後自動同步','#D8A94E');
+      });
+    });
+  }catch(e){
+    setBadge('🔴 初始化失敗:'+((e&&e.message)?e.message:e),'#E8837A');
+    console.error('Firebase init error:',e);
+    try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.roster)db=normalize(s)}catch(x){}
+    if(maybeRescale()){save();}else{render();}
+  }
+}
+
+/* ── 一次性:把所有牌局分數縮成 1/20(底/每台各 ÷20),旗標鎖住只跑一次 ── */
+function maybeRescale(){
+  if(db.rescaled20)return false;
+  const d20=v=>Math.round(((+v||0)/20)*100)/100;  // 除20,去浮點雜訊
+  db.sessions.forEach(s=>{s.base=d20(s.base);s.perTai=d20(s.perTai)});
+  db.rescaled20=true;
+  return true;
+}
+
+function save(){
+  localStorage.setItem(KEY,JSON.stringify(db));
+  if(fbRef&&!applyingRemote&&fbReady){
+    fbRef.set(JSON.parse(JSON.stringify(db))).catch(e=>{
+      setBadge('🔴 寫入失敗,資料暫存本機','#E8837A');console.error(e);
+    });
+  }
+  render();
+}
+
+function nameOf(id){const p=db.roster.find(p=>p.id===id);return p?p.name:'?'}
+function curSession(){return db.sessions.find(s=>s.id===db.currentId)||null}
+
+/* ══ 台灣規則引擎:重播每一把,推算莊家/連莊/圈/風 ══ */
+/* 規則:莊家胡牌或流局 → 連莊(連N拉N);閒家胡 → 過莊。
+   每過莊 4 次換一圈,4 圈(16 次過莊)完成一將。 */
+/* 取得第 j 將的起莊座位(0-3);沒設定則:第1將用 s.startDealer,其餘用 0(東位)*/
+function startDealerForJiang(s,j){
+  const list=(Array.isArray(s.seatings)?s.seatings:[]);
+  const e=list.find(x=>(x.jiang||1)===j);
+  if(e&&e.startDealer!=null)return e.startDealer;
+  return j===1?(s.startDealer||0):0;
+}
+function replay(s){
+  let jiang=1;
+  let dealer=startDealerForJiang(s,1), streak=0, passes=0;
+  const states=[];
+  for(const h of s.hands){
+    states.push({dealer,streak,passes});
+    if(h.type==='draw'||h.winner===dealer){streak++}
+    else{
+      streak=0;dealer=(dealer+1)%4;passes++;
+      const nj=Math.floor(passes/16)+1;      // 跨到新的一將?
+      if(nj!==jiang){jiang=nj;dealer=startDealerForJiang(s,nj);streak=0;}
+    }
+  }
+  return {states, dealer, streak, passes};
+}
+function roundLabel(st){
+  const jiang=Math.floor(st.passes/16)+1;
+  const quan=WINDS[Math.floor(st.passes/4)%4];
+  const ju=WINDS[st.passes%4];
+  return (jiang>1?'第'+jiang+'將 ':'')+quan+'風圈'+ju+'風局'+(st.streak>0?'・連'+st.streak:'');
+}
+function dealerBonus(streak){return 1+2*streak} /* 莊家1台 + 連N拉N(2N台) */
+
+/* ── 計分(莊家台/連莊台只算在與莊家有關的收付)── */
+/* ── 座位表:每將一份(以『將編號』為鍵)── */
+/* s.seatings = [{jiang:1, seats:[東,南,西,北 四個 playerId]}, {jiang:2, seats:[...]}, ...]
+   第 1 將於開局指定,之後每將開始前重新指定。分數跟著『人』走,座位輪換/換人都吃這張表。 */
+function seatingList(s){
+  return (Array.isArray(s.seatings)&&s.seatings.length)?s.seatings:[{jiang:1,seats:s.seats||[]}];
+}
+function seatingForJiang(s,jiang){
+  const arr=seatingList(s);let best=arr[0];
+  arr.forEach(x=>{const j=x.jiang||1;if(j<=jiang&&j>=(best.jiang||1))best=x});
+  return best.seats;
+}
+function jiangAtHand(s,handIndex){
+  const r=replay(s);const st=r.states[handIndex];
+  const passes=st?st.passes:r.passes;
+  return Math.floor(passes/16)+1;
+}
+function currentJiang(s){return Math.floor(replay(s).passes/16)+1}
+function currentSeating(s){return seatingForJiang(s,currentJiang(s))}
+/* 座位 i 相對『本將起莊』的門風:起莊=東,依打莊順序 東南西北 */
+function seatWind(s,i){
+  const sd=startDealerForJiang(s,currentJiang(s));
+  return WINDS[((i-sd)%4+4)%4];
+}
+function occupantAt(s,seat,handIndex){return seatingForJiang(s,jiangAtHand(s,handIndex))[seat]}
+function currentOccupant(s,seat){return currentSeating(s)[seat]}
+function allOccupants(s){
+  const set=new Set();
+  seatingList(s).forEach(x=>x.seats.forEach(p=>{if(p)set.add(p)}));
+  return [...set];
+}
+
+/* 以「玩家」為單位的本場統計(分數跟著人走,換人不影響留下者)*/
+function playerTotals(s){
+  const m={};
+  const ensure=pid=>{if(!m[pid])m[pid]={score:0,zimo:0,ron:0,gun:0,mo:0};return m[pid]};
+  allOccupants(s).forEach(ensure);
+  const r=replay(s);
+  s.hands.forEach((h,idx)=>{
+    if(h.type==='draw')return;
+    const st=r.states[idx];
+    const bonus=dealerBonus(st.streak);
+    const pay=(tai)=>s.base+tai*s.perTai;
+    const seatsNow=seatingForJiang(s,Math.floor(st.passes/16)+1);
+    const occ=seat=>ensure(seatsNow[seat]);
+    if(h.type==='zimo'){
+      const W=occ(h.winner);W.zimo++;
+      s.seats.forEach((_,i)=>{
+        if(i===h.winner)return;
+        const P=occ(i);P.mo++;
+        const withBonus=(h.winner===st.dealer)||(i===st.dealer);
+        const amt=pay(h.tai+(withBonus?bonus:0));
+        P.score-=amt;W.score+=amt;
+      });
+    }else{
+      const W=occ(h.winner),G=occ(h.gun);
+      const withBonus=(h.winner===st.dealer)||(h.gun===st.dealer);
+      const amt=pay(h.tai+(withBonus?bonus:0));
+      W.ron++;W.score+=amt;G.gun++;G.score-=amt;
+    }
+  });
+  // 喊碰不碰罰點:喊碰者賠、出牌者得
+  (s.penalties||[]).forEach(pen=>{
+    const pts=pen.points||1;
+    if(m[pen.caller])m[pen.caller].score-=pts;
+    if(m[pen.discarder])m[pen.discarder].score+=pts;
+  });
+  return m;
+}
+
+/* 以「座位」為單位的即時看板(每格顯示該座位『目前佔用者』的個人分數)*/
+function sessionTotals(s){
+  const pt=playerTotals(s);
+  return s.seats.map((_,i)=>{
+    const pid=currentOccupant(s,i);
+    const st=pt[pid]||{score:0,zimo:0,ron:0,gun:0,mo:0};
+    return {...st,pid};
+  });
+}
+function handWinAmount(s,h,st){
+  if(h.type==='draw')return 0;
+  const bonus=dealerBonus(st.streak);
+  const pay=(tai)=>s.base+tai*s.perTai;
+  if(h.type==='zimo'){
+    let sum=0;
+    s.seats.forEach((_,i)=>{
+      if(i===h.winner)return;
+      const withBonus=(h.winner===st.dealer)||(i===st.dealer);
+      sum+=pay(h.tai+(withBonus?bonus:0));
+    });
+    return sum;
+  }
+  const withBonus=(h.winner===st.dealer)||(h.gun===st.dealer);
+  return pay(h.tai+(withBonus?bonus:0));
+}
+function lifetimeStats(){
+  const m={};
+  db.roster.forEach(p=>m[p.id]={id:p.id,name:p.name,games:0,score:0,zimo:0,ron:0,gun:0});
+  db.sessions.forEach(s=>{
+    const pt=playerTotals(s);
+    allOccupants(s).forEach(pid=>{
+      if(!m[pid]||!pt[pid])return;
+      const st=pt[pid];
+      m[pid].games++;m[pid].score+=st.score;
+      m[pid].zimo+=st.zimo;m[pid].ron+=st.ron;m[pid].gun+=st.gun;
+    });
+  });
+  return Object.values(m);
+}
+/* 玩家 → 歷史總累積排行名次(1 起) */
+function lifetimeRankMap(){
+  const ranked=lifetimeStats().slice().sort((a,b)=>b.score-a.score);
+  const m={};ranked.forEach((p,idx)=>{m[p.id]=idx+1});
+  return m;
+}
+/* 總累積排行榜資料:每人總分、將數、各項每將平均、今日(本場)增減 */
+function lifetimeLeaderboard(){
+  const m={};
+  db.roster.forEach(p=>m[p.id]={id:p.id,name:p.name,score:0,jiangs:0,ron:0,zimo:0,gun:0,mo:0,today:0});
+  const cs=curSession();
+  db.sessions.forEach(s=>{
+    const pt=playerTotals(s);
+    const r=replay(s);
+    const jset=new Set();
+    r.states.forEach(st=>jset.add(Math.floor(st.passes/16)+1)); // 有打過牌的『將』
+    allOccupants(s).forEach(pid=>{
+      if(!m[pid]||!pt[pid])return;
+      m[pid].score+=pt[pid].score;
+      m[pid].ron+=pt[pid].ron;m[pid].zimo+=pt[pid].zimo;
+      m[pid].gun+=pt[pid].gun;m[pid].mo+=pt[pid].mo;
+      if(cs&&s.id===cs.id)m[pid].today+=pt[pid].score; // 本場(今日)增減
+    });
+    jset.forEach(j=>{seatingForJiang(s,j).forEach(pid=>{if(m[pid])m[pid].jiangs++})});
+  });
+  return Object.values(m).filter(p=>p.jiangs>0);
+}
+
+/* ── 玩家名冊 ── */
+function addPlayer(){
+  const n=document.getElementById('newPlayerName').value.trim();
+  if(!n){toast('請先輸入玩家名字');return}
+  if(db.roster.some(p=>p.name===n)){toast('已有同名玩家');return}
+  db.roster.push({id:uid(),name:n});
+  document.getElementById('newPlayerName').value='';
+  save();
+  document.getElementById('newPlayerName').placeholder='✓ 已新增 '+n+',可繼續輸入下一位';
+}
+function removePlayer(id){
+  const used=db.sessions.some(s=>s.seats.includes(id));
+  if(used){toast('此玩家已有牌局紀錄,無法刪除');return}
+  db.roster=db.roster.filter(p=>p.id!==id);save();
+}
+
+/* ── 牌局 ── */
+function startSession(){
+  const seats=[0,1,2,3].map(i=>document.getElementById('seat'+i).value);
+  if(seats.some(v=>!v)){toast('請先選滿四個座位(玩家需先在名冊新增)');return}
+  if(new Set(seats).size<4){toast('四個座位不能重複選同一位玩家');return}
+  const s={id:uid(),date:document.getElementById('sDate').value||new Date().toISOString().slice(0,10),
+    base:+document.getElementById('sBase').value||0,perTai:+document.getElementById('sPerTai').value||0,
+    startDealer:+document.getElementById('startDealer').value||0,
+    seats,seatings:[{jiang:1,seats:[...seats],startDealer:+document.getElementById('startDealer').value||0}],hands:[]};
+  db.sessions.push(s);db.currentId=s.id;
+  cur={winner:null,type:null,gun:null};
+  save();updateForm();
+}
+
+/* ── 每將座位設定 ── */
+function fillReseatSelects(s){
+  // 選項:名冊全體;預設帶入目前四家(方便只換一兩個或直接輪座)
+  const optsHtml=db.roster.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  const curSeats=currentSeating(s);
+  [0,1,2,3].forEach(i=>{
+    const el=document.getElementById('rs'+i);
+    if(!el)return;
+    // 若尚未由使用者動過(重繪時保留其選擇),只有第一次填入預設
+    if(el.dataset.seeded!=='1'){
+      el.innerHTML='<option value="">— 選擇玩家 —</option>'+optsHtml;
+      el.value=curSeats[i]||'';
+      el.dataset.seeded='1';
+    }else{
+      const v=el.value;el.innerHTML='<option value="">— 選擇玩家 —</option>'+optsHtml;el.value=v;
+    }
+  });
+  const dsel=document.getElementById('rsDealer');
+  if(dsel&&dsel.dataset.seeded!=='1'){dsel.value='0';dsel.dataset.seeded='1';}
+}
+function fillReseatKeep(){
+  const s=curSession();if(!s)return;
+  const curSeats=currentSeating(s);
+  [0,1,2,3].forEach(i=>{const el=document.getElementById('rs'+i);el.value=curSeats[i]||''});
+  const dsel=document.getElementById('rsDealer');if(dsel)dsel.value='0';
+}
+function confirmReseat(){
+  const s=curSession();if(!s)return;
+  const seats=[0,1,2,3].map(i=>document.getElementById('rs'+i).value);
+  if(seats.some(v=>!v)){toast('請選滿四個座位');return}
+  if(new Set(seats).size<4){toast('四個座位不能重複選同一位玩家');return}
+  const startDealer=+document.getElementById('rsDealer').value||0;
+  const curJ=Math.floor(replay(s).passes/16)+1;
+  s.seatings=s.seatings||[{jiang:1,seats:[...s.seats]}];
+  const ex=s.seatings.find(x=>(x.jiang||1)===curJ);
+  if(ex){ex.seats=[...seats];ex.startDealer=startDealer;}
+  else s.seatings.push({jiang:curJ,seats:[...seats],startDealer});
+  // 重置 seeded 旗標,下一將再重新帶預設
+  [0,1,2,3].forEach(i=>{const el=document.getElementById('rs'+i);if(el)el.dataset.seeded=''});
+  const dsel=document.getElementById('rsDealer');if(dsel)dsel.dataset.seeded='';
+  cur={winner:null,type:null,gun:null};
+  // 開始這一將 → 直播畫面立即切回實況版面(停止選位子階段的輪播)
+  stopSlideshow();
+  ovLayout='broadcast';
+  save();updateForm();
+  toast('✓ 第 '+curJ+' 將座位已設定,直播畫面切回實況');
+}
+async function endSession(){
+  const s=curSession();if(!s)return;
+  const r=replay(s);
+  let msg='結束本場?結果將歸檔進歷史戰績。';
+  if(r.passes<16)msg='⚠️ 一將尚未完成(已過莊 '+r.passes+'/16 次)。<br>仍要結束本場嗎?';
+  if(!await uiConfirm(msg,'結束並歸檔','再打幾把'))return;
+  db.currentId=null;save();
+  toast('✓ 本場已歸檔');
+}
+async function deleteSession(id){
+  if(!await uiConfirm('刪除這場牌局?累積戰績會同步扣除。','刪除','取消'))return;
+  db.sessions=db.sessions.filter(s=>s.id!==id);
+  if(db.currentId===id)db.currentId=null;
+  save();
+  toast('已刪除該場牌局');
+}
+
+/* ── 記一把 ── */
+function renderChoices(){
+  const s=curSession();if(!s)return;
+  const r=replay(s);
+  const w=document.getElementById('winnerChoice'),g=document.getElementById('gunChoice');
+  w.innerHTML='';g.innerHTML='';
+  s.seats.forEach((_,i)=>{
+    const pid=currentOccupant(s,i);
+    const tag=i===r.dealer?'<span class="dz">莊'+(r.streak>0?'・連'+r.streak:'')+'</span>':'';
+    const b=document.createElement('button');b.innerHTML=nameOf(pid)+tag;b.onclick=()=>{cur.winner=i;if(cur.gun===i)cur.gun=null;updateForm()};
+    if(cur.winner===i)b.classList.add('sel');w.appendChild(b);
+    const gb=document.createElement('button');gb.innerHTML=nameOf(pid)+tag;gb.onclick=()=>{cur.gun=i;updateForm()};
+    if(i===cur.winner)gb.disabled=true;
+    if(cur.gun===i)gb.classList.add('sel');g.appendChild(gb);
+  });
+}
+function pickType(t){cur.type=t;if(t!=='ron')cur.gun=null;updateForm()}
+function updateForm(){
+  const s=curSession();if(!s)return;
+  renderChoices();
+  const r=replay(s);
+  const bonus=dealerBonus(r.streak);
+  const bonusTxt='莊1台'+(r.streak>0?'+連'+r.streak+'拉'+r.streak+'('+(2*r.streak)+'台)':'');
+  document.querySelectorAll('#typeChoice button').forEach(b=>b.classList.toggle('sel',b.dataset.t===cur.type));
+  const isRon=cur.type==='ron',isDraw=cur.type==='draw';
+  document.getElementById('gunLabel').style.display=isRon?'':'none';
+  document.getElementById('gunChoice').style.display=isRon?'':'none';
+  document.getElementById('taiLabel').style.display=isDraw?'none':'';
+  document.getElementById('taiRow').style.display=isDraw?'none':'';
+  document.getElementById('taiLabel').innerHTML=(isRon?'<b>4</b>':'<b>3</b>')+'・牌面幾台?'+(cur.type==='zimo'?'(含自摸台,':'(')+'莊家台與連莊台系統自動加)';
+  const tai=+document.getElementById('tai').value||0;
+  const pay=(t)=>s.base+t*s.perTai;
+  const dName=nameOf(currentOccupant(s,r.dealer));
+  let ok=false,txt='請完成上方選擇';
+  if(isDraw){ok=true;txt='流局 — <b style="color:var(--gold)">'+dName+'</b> 連莊(下一把為連'+(r.streak+1)+',莊台加成 '+dealerBonus(r.streak+1)+' 台)'}
+  else if(cur.winner!=null&&cur.type==='zimo'){
+    ok=true;
+    if(cur.winner===r.dealer){
+      const total=tai+bonus;
+      txt=`<b style="color:var(--gold)">${dName}(莊)</b> 自摸:牌面 ${tai} 台 + ${bonusTxt} = <b>${total} 台</b><br>→ 三家各付 <b>${pay(total).toLocaleString()}</b>,共贏 <b>${(pay(total)*3).toLocaleString()}</b> 分,莊家連莊`;
+    }else{
+      const amtD=pay(tai+bonus),amtO=pay(tai);
+      txt=`<b style="color:var(--gold)">${nameOf(currentOccupant(s,cur.winner))}</b> 自摸 ${tai} 台<br>→ 莊家 ${dName} 付 <b>${amtD.toLocaleString()}</b>(加${bonusTxt}),另兩家各付 <b>${amtO.toLocaleString()}</b>,共贏 <b>${(amtD+amtO*2).toLocaleString()}</b> 分,過莊`;
+    }
+  }
+  else if(cur.winner!=null&&isRon&&cur.gun!=null){
+    ok=true;
+    const involves=cur.winner===r.dealer||cur.gun===r.dealer;
+    const total=tai+(involves?bonus:0);
+    const extra=involves?`(牌面 ${tai} 台 + ${bonusTxt})`:'';
+    const after=cur.winner===r.dealer?'莊家連莊':'過莊';
+    txt=`<b style="color:var(--gold)">${nameOf(currentOccupant(s,cur.winner))}${cur.winner===r.dealer?'(莊)':''}</b> 胡 <b>${total} 台</b>${extra},<b style="color:#E8837A">${nameOf(currentOccupant(s,cur.gun))}${cur.gun===r.dealer?'(莊)':''}</b> 放槍 → 付 <b>${pay(total).toLocaleString()}</b> 分,${after}`;
+  }
+  document.getElementById('preview').innerHTML=txt;
+  document.getElementById('confirmBtn').disabled=!ok;
+}
+document.getElementById('tai').addEventListener('input',updateForm);
+document.getElementById('newPlayerName').addEventListener('keydown',e=>{if(e.key==='Enter')addPlayer()});
+function confirmHand(){
+  const s=curSession();if(!s)return;
+  const tai=+document.getElementById('tai').value||0;
+  s.hands.push(cur.type==='draw'?{type:'draw'}:{winner:cur.winner,type:cur.type,gun:cur.gun,tai});
+  cur={winner:null,type:null,gun:null};
+  document.getElementById('tai').value=1;
+  save();updateForm();flashOverlay();
+}
+function undoHand(){
+  const s=curSession();if(!s)return;
+  const r=replay(s);
+  const curJ=Math.floor(r.passes/16)+1;
+  // 這一將(東風圈東風局起)到目前為止打了幾把
+  const handsThisJiang=r.states.filter(st=>st.passes>=(curJ-1)*16).length;
+  // 在新一將的東風圈東風局、尚未打任何一把 → 退回該將的選位子階段(不動上一將的牌)
+  if(curJ>=2&&handsThisJiang===0){
+    s.seatings=(s.seatings||[]).filter(x=>(x.jiang||1)!==curJ);
+    // 讓選位子面板重新帶預設
+    [0,1,2,3].forEach(i=>{const el=document.getElementById('rs'+i);if(el)el.dataset.seeded=''});
+    const dsel=document.getElementById('rsDealer');if(dsel)dsel.dataset.seeded='';
+    cur={winner:null,type:null,gun:null};
+    save();
+    toast('已退回第 '+curJ+' 將的選位子階段');
+    return;
+  }
+  s.hands.pop();save();updateForm();
+}
+
+/* ── 喊碰不碰罰點 ── */
+function addPenalty(){
+  const s=curSession();if(!s)return;
+  const caller=document.getElementById('penCaller').value;
+  const discarder=document.getElementById('penDiscarder').value;
+  if(!caller||!discarder){toast('請選擇喊碰的人與出牌的人');return}
+  if(caller===discarder){toast('喊碰的人與出牌的人不能同一人');return}
+  s.penalties=s.penalties||[];
+  s.penalties.push({caller,discarder,points:1,jiang:currentJiang(s)});
+  save();
+  toast('罰點:'+nameOf(caller)+' 賠 '+nameOf(discarder)+' 1 點');
+}
+function undoPenalty(){
+  const s=curSession();if(!s||!(s.penalties&&s.penalties.length)){toast('目前沒有罰點可刪除');return}
+  const p=s.penalties.pop();
+  save();
+  toast('已刪除罰點:'+nameOf(p.caller)+' → '+nameOf(p.discarder));
+}
+
+/* ── 畫面 ── */
+function render(){
+  const opts='<option value="">— 選擇玩家 —</option>'+db.roster.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  [0,1,2,3].forEach(i=>{const el=document.getElementById('seat'+i);const v=el.value;el.innerHTML=opts;el.value=v});
+  if(!document.getElementById('sDate').value)document.getElementById('sDate').value=new Date().toISOString().slice(0,10);
+
+  const rl=document.getElementById('rosterList');
+  rl.innerHTML=db.roster.length?'':'<span style="color:var(--muted);font-size:13px">尚無玩家,請先新增</span>';
+  db.roster.forEach(p=>{
+    const c=document.createElement('span');c.className='chip';
+    c.innerHTML=`${p.name}<button title="刪除" onclick="removePlayer('${p.id}')">×</button>`;
+    rl.appendChild(c);
+  });
+
+  const s=curSession();
+  document.getElementById('newSessionPanel').style.display=s?'none':'block';
+  document.getElementById('activeSessionArea').style.display=s?'block':'none';
+
+  if(s){
+    const t=sessionTotals(s);
+    const r=replay(s);
+    const nextSt={dealer:r.dealer,streak:r.streak,passes:r.passes};
+    const jiangN=Math.floor(r.passes/16);
+    const jd=document.getElementById('jiangDone');
+    // 進入新的一將、且尚未指定該將座位 → 顯示座位設定面板、暫停記錄
+    const curJ=Math.floor(r.passes/16)+1;
+    const hasSeatingForCur=seatingList(s).some(x=>(x.jiang||1)===curJ);
+    const needSeating=!hasSeatingForCur; // 第 1 將已於開局指定
+    document.getElementById('reseatPanel').style.display=needSeating?'block':'none';
+    document.getElementById('recordPanel').style.display=needSeating?'none':'block';
+    document.getElementById('penaltyPanel').style.display=needSeating?'none':'block';
+    if(needSeating){
+      document.getElementById('reseatTitle').textContent='第 '+curJ+' 將・設定座位(換人 / 輪座位)';
+      fillReseatSelects(s);
+      jd.style.display='block';
+      jd.textContent='🎉 第 '+jiangN+' 將完成!請設定第 '+curJ+' 將的座位,或結束本場。';
+    }else{
+      jd.style.display='none';
+    }
+    document.getElementById('sessionInfo').innerHTML=
+      `<div class="roundline">🀄 ${roundLabel(nextSt)}・莊家:${nameOf(currentOccupant(s,r.dealer))}${r.streak>0?'(連'+r.streak+',莊台+'+dealerBonus(r.streak)+')':'(莊台+1)'}</div>`+
+      `${s.date}・底 ${s.base} / 台 ${s.perTai}・第 <b>${s.hands.length+1}</b> 把・過莊 ${r.passes%16}/16 — `+
+      s.seats.map((_,i)=>`${nameOf(currentOccupant(s,i))} <b style="color:${t[i].score>=0?'#7FD9AC':'#E8837A'}">${t[i].score>0?'+':''}${t[i].score.toLocaleString()}</b>`).join('、');
+    // 喊碰不碰:填入四家下拉 + 顯示本場罰點
+    const penOpts='<option value="">— 選擇 —</option>'+s.seats.map((_,i)=>{const pid=currentOccupant(s,i);return `<option value="${pid}">${nameOf(pid)}(${seatWind(s,i)})</option>`}).join('');
+    ['penCaller','penDiscarder'].forEach(id=>{const el=document.getElementById(id);if(el){const v=el.value;el.innerHTML=penOpts;if([...el.options].some(o=>o.value===v))el.value=v;}});
+    const pens=s.penalties||[];
+    const penListEl=document.getElementById('penList');
+    if(penListEl){
+      if(pens.length){
+        const recent=pens.slice(-6).reverse().map(p=>nameOf(p.caller)+'→'+nameOf(p.discarder)).join('、');
+        penListEl.innerHTML='本場罰點 <b style="color:var(--gold)">'+pens.length+'</b> 筆(最近:'+recent+(pens.length>6?' …':'')+')';
+      }else penListEl.textContent='本場尚無罰點';
+    }
+    const tb=document.getElementById('historyBody');
+    tb.innerHTML=s.hands.length?'':'<tr><td colspan="7" style="color:var(--muted)">尚無紀錄</td></tr>';
+    s.hands.map((h,idx)=>({h,idx})).reverse().forEach(({h,idx})=>{
+      const st=replay(s).states[idx];
+      const tr=document.createElement('tr');
+      if(h.type==='draw'){tr.innerHTML=`<td class="round">${roundLabel(st)}</td><td>${nameOf(occupantAt(s,st.dealer,idx))}</td><td colspan="5" style="color:var(--muted)">流局・莊家連莊</td>`}
+      else{
+        const bonus=(h.winner===st.dealer||h.type==='ron'&&h.gun===st.dealer||h.type==='zimo')?dealerBonus(st.streak):0;
+        const totalTai=h.tai+((h.winner===st.dealer||(h.type==='ron'&&h.gun===st.dealer))?dealerBonus(st.streak):0);
+        const taiTxt=h.type==='zimo'&&h.winner!==st.dealer?`${h.tai}(莊付+${dealerBonus(st.streak)})`:`${totalTai}${totalTai!==h.tai?'(含莊'+dealerBonus(st.streak)+')':''}`;
+        tr.innerHTML=`<td class="round">${roundLabel(st)}</td><td>${nameOf(occupantAt(s,st.dealer,idx))}</td><td class="win">${nameOf(occupantAt(s,h.winner,idx))}${h.winner===st.dealer?' 🀄':''}</td><td>${h.type==='zimo'?'自摸':'胡牌'}</td><td>${taiTxt}</td><td class="gun">${h.type==='ron'?nameOf(occupantAt(s,h.gun,idx)):'—'}</td><td>+${handWinAmount(s,h,st).toLocaleString()}</td>`;
+      }
+      tb.appendChild(tr);
+    });
+    if(!needSeating&&cur.winner==null&&cur.type==null)updateForm();
+  }
+
+  const life=lifetimeStats().sort((a,b)=>b.score-a.score);
+  const lb=document.getElementById('lifetimeBody');
+  lb.innerHTML=life.length?'':'<tr><td colspan="8" style="color:var(--muted)">尚無資料</td></tr>';
+  life.forEach((p,ri)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${ri+1}</td><td class="win">${p.name}</td><td>${p.games}</td><td class="${p.score>=0?'pos':'neg'}">${p.score>0?'+':''}${p.score.toLocaleString()}</td><td>${p.zimo}</td><td>${p.ron}</td><td>${p.gun}</td><td>${p.games?Math.round(p.score/p.games).toLocaleString():'—'}</td>`;
+    lb.appendChild(tr);
+  });
+
+  const sb=document.getElementById('sessionsBody');
+  const past=db.sessions.slice().reverse();
+  sb.innerHTML=past.length?'':'<tr><td colspan="4" style="color:var(--muted)">尚無牌局</td></tr>';
+  past.forEach(ss=>{
+    const pt=playerTotals(ss);
+    const res=allOccupants(ss).map(pid=>`${nameOf(pid)} ${pt[pid].score>0?'+':''}${pt[pid].score.toLocaleString()}`).join('、');
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${ss.date}${ss.id===db.currentId?' <b style="color:var(--gold)">(進行中)</b>':''}</td><td>${res}</td><td>${ss.hands.length}</td><td><button class="btn btn-red btn-sm" onclick="deleteSession('${ss.id}')">刪除</button></td>`;
+    sb.appendChild(tr);
+  });
+
+  renderOverlay();
+}
+
+/* ══ 小卡位置微調(拖曳)══ */
+const POS_KEY='mj_overlay_pos_v1';
+const DRAG_IDS=['bcSummary','bcTitle','cornerN','cornerW','cornerE','cornerS'];
+let overlayPos=loadPos();
+let editPos=false;
+
+function loadPos(){try{return JSON.parse(localStorage.getItem(POS_KEY))||{}}catch(e){return {}}}
+function savePos(){localStorage.setItem(POS_KEY,JSON.stringify(overlayPos))}
+
+function applyPositions(){
+  DRAG_IDS.forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    const p=overlayPos[id];
+    if(p){
+      // 一律改用 left/top 定位(清掉預設的 right/bottom)
+      el.style.left=p.left+'px';el.style.top=p.top+'px';
+      el.style.right='auto';el.style.bottom='auto';
+    }else{
+      // 沒存過的就清掉 inline,回到 CSS 預設角落
+      el.style.left='';el.style.top='';el.style.right='';el.style.bottom='';
+    }
+  });
+}
+
+function toggleEditPos(){
+  editPos=!editPos;
+  document.body.classList.toggle('editpos',editPos);
+  document.getElementById('editPosBtn').classList.toggle('btn-gold',editPos);
+  document.getElementById('editPosBtn').classList.toggle('btn-outline',!editPos);
+}
+async function resetPositions(){
+  if(!await uiConfirm('把所有表格與小卡位置回復成預設四角?','回復預設','取消'))return;
+  overlayPos={};savePos();applyPositions();
+  toast('位置已回復預設');
+}
+
+function startDrag(e){
+  if(!editPos)return;
+  const el=e.currentTarget;
+  e.preventDefault();
+  const parent=document.getElementById('broadcast').getBoundingClientRect();
+  const rect=el.getBoundingClientRect();
+  const pt=e.touches?e.touches[0]:e;
+  const offX=pt.clientX-rect.left, offY=pt.clientY-rect.top;
+  function move(ev){
+    const p=ev.touches?ev.touches[0]:ev;
+    let left=p.clientX-parent.left-offX;
+    let top=p.clientY-parent.top-offY;
+    // 限制在畫面內
+    left=Math.max(0,Math.min(left,parent.width-rect.width));
+    top=Math.max(0,Math.min(top,parent.height-rect.height));
+    el.style.left=left+'px';el.style.top=top+'px';el.style.right='auto';el.style.bottom='auto';
+    overlayPos[el.id]={left:Math.round(left),top:Math.round(top)};
+  }
+  function up(){
+    document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);
+    document.removeEventListener('touchmove',move);document.removeEventListener('touchend',up);
+    savePos();
+  }
+  document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+  document.addEventListener('touchmove',move,{passive:false});document.addEventListener('touchend',up);
+}
+function bindDrag(){
+  DRAG_IDS.forEach(id=>{
+    const el=document.getElementById(id);if(!el||el.dataset.dragbound)return;
+    el.dataset.dragbound='1';
+    el.addEventListener('mousedown',startDrag);
+    el.addEventListener('touchstart',startDrag,{passive:false});
+  });
+}
+
+function renderBroadcast(){
+  const s=curSession();
+  const summaryEl=document.getElementById('bcSummary');
+  const titleEl=document.getElementById('bcTitle');
+  const hintEl=document.getElementById('bcHint');
+  // 各座位對應的畫面角落:東=下方(south視覺)、南=右下(east)、西=右上(west)、北=左上(north)
+  // 依參考畫面:美顏(東)在左下、雞腿(南)在右下、跳跳(西)在右上、羊羽(北)在左上
+  const seatToCorner=['cornerS','cornerE','cornerW','cornerN']; // 東,南,西,北 → 畫面角落
+
+  if(!s){
+    summaryEl.style.display='none';titleEl.style.display='none';
+    ['cornerN','cornerW','cornerE','cornerS'].forEach(id=>document.getElementById(id).innerHTML='');
+    hintEl.style.display='block';
+    hintEl.innerHTML='目前沒有進行中的牌局<br><span style="font-size:14px;color:rgba(246,241,227,.6)">到「本場控制台」開新牌局後,這裡會顯示四家即時比分</span>';
+    bindDrag();applyPositions();
+    return;
+  }
+  hintEl.style.display='none';
+  summaryEl.style.display='block';titleEl.style.display='block';
+
+  const t=sessionTotals(s);
+  const r=replay(s);
+
+  // 排名:依當日分數
+  const ranked=t.map((x,i)=>({...x,i})).sort((a,b)=>b.score-a.score);
+  const rankOf={};ranked.forEach((rr,ri)=>rankOf[rr.i]=ri+1);
+  const leaderSeat=ranked[0].i;
+
+  // ── 左上總結表(依分數高→低排列,參考畫面)──
+  const cell=(v,cls)=>`<td class="${cls||''}">${v}</td>`;
+  let rows='';
+  ranked.forEach(p=>{
+    const scoreCls=p.score>0?'p':p.score<0?'n':'';
+    rows+=`<tr class="${p.i===leaderSeat?'lead':''}">`+
+      `<td class="nm">${nameOf(p.pid)}</td>`+
+      cell((p.score>0?'+':'')+p.score, scoreCls)+
+      cell(p.zimo)+cell(p.ron)+cell(p.gun)+cell(p.mo)+
+      cell(Math.floor(r.passes/16)+1)+
+      '</tr>';
+  });
+  summaryEl.innerHTML=`<table>
+    <thead><tr><th>玩家</th><th>戰績</th><th>自摸</th><th>胡牌</th><th>放槍</th><th>被摸</th><th>將數</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+
+  // ── 右上將數/圈風徽章(只保留「N 將」與「X風圈Y風局」)──
+  const jiangN=Math.floor(r.passes/16)+1;
+  const quan=WINDS[Math.floor(r.passes/4)%4];
+  const ju=WINDS[r.passes%4];
+  titleEl.innerHTML=`<div class="jn">${jiangN}<small> 將</small></div><div class="rd">${quan}風圈${ju}風局</div>`;
+
+  // ── 四角座位小卡 ──
+  const lrank=lifetimeRankMap();   // RANK 以歷史總累積排行為準
+  ['cornerN','cornerW','cornerE','cornerS'].forEach(id=>document.getElementById(id).innerHTML='');
+  s.seats.forEach((_,i)=>{
+    const pid=currentOccupant(s,i);
+    const el=document.getElementById(seatToCorner[i]);
+    const isDealer=i===r.dealer;
+    const scoreCls=t[i].score>0?'p':t[i].score<0?'n':'';
+    const posClass={cornerN:'c-north',cornerW:'c-west',cornerE:'c-east',cornerS:'c-south'}[seatToCorner[i]];
+    el.className='bc-corner '+posClass+(isDealer?' dealer':'');
+    el.innerHTML=`
+      <div class="top">
+        <div class="rk">RANK<b>${lrank[pid]||'—'}</b></div>
+        <div class="nm">${nameOf(pid)}${isDealer?'<span class="dz">莊'+(r.streak>0?r.streak:'')+'</span>':''}</div>
+      </div>
+      <div class="bot">
+        <div class="wind">${seatWind(s,i)}</div>
+        <div class="sc ${scoreCls}">${t[i].score>0?'+':''}${t[i].score}</div>
+      </div>`;
+  });
+  bindDrag();
+  applyPositions();
+}
+
+function renderOverlay(){
+  syncAutoSlideshow();  // 選位子階段自動輪播 / 座位確定切回實況(依資料狀態,跨裝置一致)
+  const bc=document.getElementById('broadcast');
+  const cl=document.getElementById('cardsLayout');
+  if(ovLayout==='broadcast'){bc.style.display='block';cl.style.display='none';renderBroadcast();return;}
+  bc.style.display='none';cl.style.display='block';
+  const tiles=document.getElementById('tiles');tiles.innerHTML='';
+  const life=lifetimeStats();
+  const lifeMap={};life.forEach(p=>lifeMap[p.id]=p);
+  const s=curSession();
+
+  if(ovMode==='today'&&s){
+    const r=replay(s);
+    const pt=playerTotals(s);              // 本場每位玩家(含換上換下)的分數
+    // 目前在座者:playerId → 座位index
+    const seatOf={};s.seats.forEach((_,i)=>{seatOf[currentOccupant(s,i)]=i;});
+    // 本場所有參與者,依本場分數排名
+    const ranked=allOccupants(s).map(pid=>({pid,...(pt[pid]||{score:0,zimo:0,ron:0,gun:0})}))
+      .sort((a,b)=>b.score-a.score);
+    const topPid=ranked[0]&&ranked[0].score>0?ranked[0].pid:null;
+    ranked.forEach((p,ri)=>{
+      const lf=lifeMap[p.pid]||{score:0,games:0};
+      const seated=seatOf[p.pid]!==undefined;
+      const i=seatOf[p.pid];
+      const isDealer=seated&&i===r.dealer;
+      const isTop=p.pid===topPid;
+      const d=document.createElement('div');
+      d.className='tile'+(isTop?' leader':'')+(seated?'':' offseat');
+      d.innerHTML=`<div class="rank">${isTop?'👑 領先':'第 '+(ri+1)+' 名'}</div>
+        ${isDealer?'<div class="dealer">莊'+(r.streak>0?'・連'+r.streak:'')+'</div>':''}
+        <div class="seatwind">${seated?seatWind(s,i)+'家':'已下場'}</div>
+        <div class="pname">${nameOf(p.pid)}</div>
+        <div class="score ${p.score>0?'pos':p.score<0?'neg':''}">${p.score>0?'+':''}${p.score.toLocaleString()}</div>
+        <div class="stats"><span class="s-zimo">自摸 ${p.zimo}</span><span>胡牌 ${p.ron}</span><span class="s-gun">放槍 ${p.gun}</span></div>
+        <div class="life"><span>歷史累積 <b>${lf.score>0?'+':''}${lf.score.toLocaleString()}</b></span><span>${lf.games} 場</span></div>`;
+      tiles.appendChild(d);
+    });
+    const nextSt={dealer:r.dealer,streak:r.streak,passes:r.passes};
+    document.getElementById('ovTitle').textContent='今日戰績';
+    document.getElementById('ovRound').textContent=roundLabel(nextSt)+'・第 '+(s.hands.length+1)+' 把・共 '+ranked.length+' 位選手';
+  }else{
+    const lb=lifetimeLeaderboard().sort((a,b)=>b.score-a.score);
+    const cs=curSession();
+    const activeSet=new Set(cs?allOccupants(cs):[]);
+    const avg=(v,j)=>j?(v/j).toFixed(2):'—';
+    const medal=rk=>rk<=3?['🥇','🥈','🥉'][rk-1]:('#'+rk);
+    const rowHtml=(p,rk)=>{
+      const active=activeSet.has(p.id);
+      const cls=active?(p.today>=0?'up':'down'):'';
+      const delta=active?` <span class="dl">(${p.today>=0?'+':''}${p.today})</span>`:'';
+      return `<tr class="${cls}">
+        <td class="rk">${medal(rk)}</td>
+        <td class="nm">${p.name}</td>
+        <td class="sc">${p.score}${delta}</td>
+        <td>${avg(p.ron,p.jiangs)}</td>
+        <td>${avg(p.zimo,p.jiangs)}</td>
+        <td>${avg(p.gun,p.jiangs)}</td>
+        <td>${avg(p.mo,p.jiangs)}</td>
+        <td>${p.jiangs}</td>
+      </tr>`;
+    };
+    const head='<thead><tr><th>排名</th><th>玩家</th><th>總分</th><th>胡牌</th><th>自摸</th><th>放槍</th><th>被摸</th><th>將數</th></tr></thead>';
+    const tbl=(rows,start)=>`<table class="lb-table">${head}<tbody>${rows.map((p,i)=>rowHtml(p,start+i)).join('')}</tbody></table>`;
+    if(!lb.length){
+      tiles.innerHTML='<div style="grid-column:1/-1;text-align:center;color:rgba(246,241,227,.5)">尚無資料,開一場牌局後這裡會顯示排行</div>';
+    }else{
+      const left=lb.slice(0,10), right=lb.slice(10);
+      const inner=right.length
+        ? `<div class="lb-col">${tbl(left,1)}</div><div class="lb-col">${tbl(right,11)}</div>`
+        : `<div class="lb-col" style="max-width:820px;margin:0 auto">${tbl(left,1)}</div>`;
+      tiles.innerHTML=`<div class="lb-wrap">${inner}</div>`;
+    }
+    document.getElementById('ovTitle').textContent='🏆 總累積開心榜';
+    document.getElementById('ovRound').textContent='總分 & 每將平均數據・共 '+db.sessions.length+' 場'+(cs?'(紅=今日上升 / 綠=今日下降)':'');
+  }
+  // 輪播提示 pill:顯示下一張
+  const pill=document.getElementById('ssPill');
+  if(pill&&slideshow&&slideSeq.length>1){
+    const nx=slideSeq[(slideIdx+1)%slideSeq.length];
+    pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':'總累積排行');
+  }else if(pill){pill.textContent='● 自動輪播中';}
+}
+function flashOverlay(){document.querySelectorAll('.tile,.bc-corner').forEach(t=>{t.classList.remove('flash');void t.offsetWidth;t.classList.add('flash')})}
+
+/* ── 備份 ── */
+function exportData(){
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='mahjong-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();
+}
+function importData(input){
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.roster||!d.sessions)throw 0;db=normalize(d);save();toast('✓ 匯入成功')}catch(e){toast('檔案格式錯誤')}};
+  r.readAsText(f);input.value='';
+}
+async function wipeAll(){
+  if(!await uiConfirm('確定清空<b>所有</b>玩家與牌局資料?<br>此動作無法復原,建議先匯出備份。','清空全部','取消'))return;
+  if(!await uiConfirm('真的確定嗎?最後確認。','我確定,清空','取消'))return;
+  db={roster:[],sessions:[],currentId:null};save();toast('已清空全部資料');
+}
+
+/* ── 檢視切換 ── */
+function showView(v){
+  document.getElementById('controlView').style.display=v==='control'?'block':'none';
+  document.getElementById('historyView').style.display=v==='history'?'block':'none';
+  document.getElementById('overlayView').style.display=v==='overlay'?'block':'none';
+  ['Control','History','Overlay'].forEach(n=>document.getElementById('tab'+n).classList.toggle('active',n.toLowerCase()===v));
+  if(v!=='overlay'){document.body.classList.remove('greenscreen');stopSlideshow();}
+}
+/* ── 自動輪播(開播前 / 中場 / 選位子階段的螢幕保護)── */
+/* 是否停在『某將已打完、尚未指定下一將座位』的選位子階段 */
+function awaitingSeating(s){
+  if(!s)return false;
+  const passes=replay(s).passes;
+  const curJ=Math.floor(passes/16)+1;
+  return !seatingList(s).some(x=>(x.jiang||1)===curJ); // 第1將開局已指定
+}
+function buildSlideSeq(){
+  // 選位子階段(slideshowAuto):固定輪播「今日大卡 → 總累積榜」兩張
+  if(slideshowAuto){
+    return [{layout:'cards',mode:'today'},{layout:'cards',mode:'lifetime'}];
+  }
+  // 手動輪播:有牌局則今日+總累積,否則只總累積
+  const s=curSession();
+  const seq=[];
+  if(s)seq.push({layout:'cards',mode:'today'});
+  seq.push({layout:'cards',mode:'lifetime'});
+  return seq;
+}
+function ensureSlideTimer(){
+  clearInterval(slideTimer);
+  const sel=document.getElementById('slideSec');
+  const sec=+(sel&&sel.value)||8000;
+  slideTimer=setInterval(slideTick,sec);
+}
+function slideTick(){
+  slideSeq=buildSlideSeq();
+  slideIdx=(slideIdx+1)%slideSeq.length;
+  const sl=slideSeq[slideIdx];
+  ovLayout=sl.layout;ovMode=sl.mode;
+  const cl=document.getElementById('cardsLayout');
+  if(cl){cl.style.animation='none';void cl.offsetWidth;cl.style.animation='';}
+  render();
+}
+function startSlideshow(){
+  slideshow=true;
+  document.body.classList.add('slideshow');
+  const b=document.getElementById('slideshowBtn');if(b)b.textContent='⏸ 停止輪播';
+  slideSeq=buildSlideSeq();slideIdx=0;
+  const sl=slideSeq[slideIdx];ovLayout=sl.layout;ovMode=sl.mode;
+  ensureSlideTimer();
+  render();
+}
+function stopSlideshow(){
+  slideshow=false;slideshowAuto=false;
+  document.body.classList.remove('slideshow');
+  const b=document.getElementById('slideshowBtn');if(b)b.textContent='▶ 自動輪播';
+  clearInterval(slideTimer);slideTimer=null;
+}
+function toggleSlideshow(){slideshow?stopSlideshow():startSlideshow()}
+/* 手動切換版面時,先停止輪播(選位子階段除外,見 renderOverlay 會自動接管)*/
+function manualView(layout,mode){
+  stopSlideshow();
+  ovLayout=layout;if(mode)ovMode=mode;
+  render();
+}
+/* 依資料狀態自動接管:選位子階段 → 輪播;座位確定 → 切回實況版面 */
+function syncAutoSlideshow(){
+  const boundary=awaitingSeating(curSession());
+  if(boundary){
+    slideshowAuto=true;
+    if(!slideshow){
+      slideshow=true;slideIdx=0;
+      document.body.classList.add('slideshow');
+      const b=document.getElementById('slideshowBtn');if(b)b.textContent='⏸ 停止輪播';
+      ensureSlideTimer();
+    }
+    slideSeq=buildSlideSeq();
+    if(slideIdx>=slideSeq.length)slideIdx=0;
+    ovLayout='cards';ovMode=slideSeq[slideIdx].mode;
+    return true;
+  }
+  if(slideshowAuto){          // 剛離開選位子階段(座位已確定)→ 回實況版面
+    stopSlideshow();
+    ovLayout='broadcast';
+  }
+  return false;
+}
+
+function toggleGreen(){document.body.classList.add('greenscreen')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.body.classList.remove('greenscreen')});
+
+window.addEventListener('storage',e=>{if(e.key===KEY&&!fbRef){try{db=normalize(JSON.parse(localStorage.getItem(KEY)));render()}catch(x){}}});
+
+const params=new URLSearchParams(location.search);
+if(params.get('view')==='overlay'){showView('overlay')}
+if(params.get('green')==='1'){showView('overlay');toggleGreen()}
+initStore();render();
+if(params.get('ss')==='1'){showView('overlay');startSlideshow();}
+</script>
+<!-- 畫面內確認視窗 & 提示(取代原生 confirm/alert,OBS 也能用)-->
+<div id="uiModal" style="display:none">
+  <div class="uim-back"></div>
+  <div class="uim-box">
+    <div class="uim-msg" id="uimMsg"></div>
+    <div class="uim-btns" id="uimBtns"></div>
+  </div>
+</div>
+<div id="uiToast"></div>
+</body>
+</html>
