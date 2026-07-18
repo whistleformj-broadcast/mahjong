@@ -1262,7 +1262,7 @@ function startDrag(e){
     left=Math.max(0,Math.min(left,parent.width-rect.width));
     top=Math.max(0,Math.min(top,parent.height-rect.height));
     el.style.left=left+'px';el.style.top=top+'px';el.style.right='auto';el.style.bottom='auto';
-    ovPos()[el.id]={xp:+(left/parent.width*100).toFixed(3),yp:+(top/parent.height*100).toFixed(3)};
+    ovPos()[el.id]=Object.assign(ovPos()[el.id]||{},{xp:+(left/parent.width*100).toFixed(3),yp:+(top/parent.height*100).toFixed(3)}); // 合併保留 scale
   }
   function up(){
     document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);
