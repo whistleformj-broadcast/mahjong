@@ -18,6 +18,11 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--felt);color:var(--iv
 body.greenscreen{background:#00FF00}
 body.greenscreen .topbar,body.greenscreen #controlView,body.greenscreen #historyView{display:none!important}
 body.ovview .topbar{display:none}                       /* 直播畫面:隱藏版頭橫幅(預覽與輸出一致)*/
+/* 直播畫面舞台:鎖定 16:9、置中填滿,讓「編輯畫面」與「OBS 輸出」座標一致(所見即所得)*/
+body.ovview #overlayView{padding:0;min-height:100vh}
+body.ovview #broadcast{width:min(100vw, calc(100vh * 16 / 9));aspect-ratio:16 / 9;height:auto;min-height:0;margin:0 auto}
+body.ovview #cardsLayout{padding:24px;box-sizing:border-box}
+body.editpos #broadcast{outline:2px dashed rgba(216,169,78,.45);outline-offset:-2px}  /* 編輯時顯示 16:9 舞台邊界 */
 body.outputmode .ov-tools,body.outputmode .editpos-bar{display:none!important} /* OBS 輸出:隱藏底部按鈕/編輯列 */
 
 .topbar{display:flex;align-items:center;gap:12px;padding:14px 20px;background:var(--felt-deep);border-bottom:2px solid rgba(216,169,78,.35);flex-wrap:wrap}
@@ -387,7 +392,11 @@ body.greenscreen .ov-foot{display:none}
     <div class="bc-hint" id="bcHint"></div>
   </div>
   <div class="editpos-bar">
-    <span><b>編輯版面模式</b>・拖曳元素可移動,拖<b style="color:var(--gold)">右下角金色把手</b>可縮放大小</span>
+    <span><b>編輯版面模式</b>・拖曳可移動,拖右下角金色把手可縮放</span>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;white-space:nowrap">四家卡片大小
+      <input type="range" id="cornerScale" min="0.5" max="2.5" step="0.05" value="1" style="width:120px" oninput="setCornerScale(this.value,false)" onchange="setCornerScale(this.value,true)">
+      <span id="cornerScaleVal" style="min-width:40px;color:var(--gold);font-weight:700">100%</span>
+    </label>
     <button class="btn btn-outline btn-sm" onclick="resetPositions()">回復預設</button>
     <button class="btn btn-gold btn-sm" onclick="toggleEditPos()">完成 ✓</button>
   </div>
@@ -1112,9 +1121,31 @@ function applyPositions(){
   });
 }
 
+/* 一次把四家選手小卡設成相同比例 */
+function setCornerScale(v,doSave){
+  v=+v;
+  const P=ovPos();
+  ['cornerN','cornerW','cornerE','cornerS'].forEach(id=>{
+    P[id]=Object.assign(P[id]||{},{scale:+v.toFixed(3)});
+  });
+  const lbl=document.getElementById('cornerScaleVal');if(lbl)lbl.textContent=Math.round(v*100)+'%';
+  applyPositions();
+  if(doSave)savePos();
+}
+/* 進編輯模式時,把滑桿同步到目前四家的比例 */
+function syncCornerScaleSlider(){
+  const P=ovPos();
+  const scales=['cornerN','cornerW','cornerE','cornerS'].map(id=>(P[id]&&P[id].scale)||1);
+  const eq=scales.every(s=>Math.abs(s-scales[0])<0.001);
+  const v=eq?scales[0]:1;
+  const sl=document.getElementById('cornerScale');if(sl)sl.value=v;
+  const lbl=document.getElementById('cornerScaleVal');if(lbl)lbl.textContent=Math.round(v*100)+'%';
+}
+
 function toggleEditPos(){
   editPos=!editPos;
   document.body.classList.toggle('editpos',editPos);
+  if(editPos)syncCornerScaleSlider();
   document.getElementById('editPosBtn').classList.toggle('btn-gold',editPos);
   document.getElementById('editPosBtn').classList.toggle('btn-outline',!editPos);
 }
