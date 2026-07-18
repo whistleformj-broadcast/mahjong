@@ -393,10 +393,18 @@ body.greenscreen .ov-foot{display:none}
   </div>
   <div class="editpos-bar">
     <span><b>編輯版面模式</b>・拖曳可移動,拖右下角金色把手可縮放</span>
-    <label style="display:flex;align-items:center;gap:6px;font-size:13px;white-space:nowrap">四家卡片大小
-      <input type="range" id="cornerScale" min="0.5" max="2.5" step="0.05" value="1" style="width:120px" oninput="setCornerScale(this.value,false)" onchange="setCornerScale(this.value,true)">
-      <span id="cornerScaleVal" style="min-width:40px;color:var(--gold);font-weight:700">100%</span>
-    </label>
+    <div style="display:flex;align-items:center;gap:14px;font-size:12.5px;white-space:nowrap;flex-wrap:wrap">
+      <span style="color:var(--gold);font-weight:700">四家小卡</span>
+      <label style="display:flex;align-items:center;gap:5px">大小
+        <input type="range" id="cornerScale" min="0.6" max="2.5" step="0.05" value="1.25" style="width:90px" oninput="applyCornerLayout(false)" onchange="applyCornerLayout(true)">
+        <span id="cornerScaleVal" style="min-width:38px;color:var(--gold);font-weight:700">125%</span></label>
+      <label style="display:flex;align-items:center;gap:5px">X軸
+        <input type="range" id="cornerX" min="1" max="45" step="1" value="4" style="width:80px" oninput="applyCornerLayout(false)" onchange="applyCornerLayout(true)">
+        <span id="cornerXVal" style="min-width:32px;color:var(--gold);font-weight:700">4%</span></label>
+      <label style="display:flex;align-items:center;gap:5px">Y軸
+        <input type="range" id="cornerY" min="1" max="45" step="1" value="4" style="width:80px" oninput="applyCornerLayout(false)" onchange="applyCornerLayout(true)">
+        <span id="cornerYVal" style="min-width:32px;color:var(--gold);font-weight:700">4%</span></label>
+    </div>
     <button class="btn btn-outline btn-sm" onclick="resetPositions()">回復預設</button>
     <button class="btn btn-gold btn-sm" onclick="toggleEditPos()">完成 ✓</button>
   </div>
@@ -1122,30 +1130,54 @@ function applyPositions(){
 }
 
 /* 一次把四家選手小卡設成相同比例 */
-function setCornerScale(v,doSave){
-  v=+v;
+/* 一次把四家小卡設成相同大小 + 對稱位置(X軸=左右邊距、Y軸=上下邊距,單位%)*/
+function applyCornerLayout(doSave){
+  const stage=document.getElementById('broadcast').getBoundingClientRect();
+  const size=+(document.getElementById('cornerScale').value)||1.25;
+  const xin=+(document.getElementById('cornerX').value)||4;
+  const yin=+(document.getElementById('cornerY').value)||4;
+  document.getElementById('cornerScaleVal').textContent=Math.round(size*100)+'%';
+  document.getElementById('cornerXVal').textContent=xin+'%';
+  document.getElementById('cornerYVal').textContent=yin+'%';
   const P=ovPos();
-  ['cornerN','cornerW','cornerE','cornerS'].forEach(id=>{
-    P[id]=Object.assign(P[id]||{},{scale:+v.toFixed(3)});
-  });
-  const lbl=document.getElementById('cornerScaleVal');if(lbl)lbl.textContent=Math.round(v*100)+'%';
+  const CS=['cornerN','cornerW','cornerE','cornerS'];
+  // 先套 scale 才能量到縮放後的實際大小
+  CS.forEach(id=>{P[id]=Object.assign(P[id]||{},{scale:+size.toFixed(3)})});
+  applyPositions();
+  if(!stage.width)return;
+  const ref=document.getElementById('cornerS').getBoundingClientRect();
+  const cw=ref.width/stage.width*100, ch=ref.height/stage.height*100;
+  const set=(id,xp,yp)=>{P[id]=Object.assign(P[id]||{},{xp:+xp.toFixed(3),yp:+yp.toFixed(3),scale:+size.toFixed(3)})};
+  set('cornerN', xin, yin);                // 左上(北)
+  set('cornerW', 100-xin-cw, yin);         // 右上(西)
+  set('cornerS', xin, 100-yin-ch);         // 左下(東)
+  set('cornerE', 100-xin-cw, 100-yin-ch);  // 右下(南)
   applyPositions();
   if(doSave)savePos();
 }
-/* 進編輯模式時,把滑桿同步到目前四家的比例 */
-function syncCornerScaleSlider(){
+/* 進編輯模式時,把三個滑桿同步到目前狀態(未設過則預設 125% / 4% / 4%)*/
+function syncCornerControls(){
   const P=ovPos();
-  const scales=['cornerN','cornerW','cornerE','cornerS'].map(id=>(P[id]&&P[id].scale)||1);
-  const eq=scales.every(s=>Math.abs(s-scales[0])<0.001);
-  const v=eq?scales[0]:1;
-  const sl=document.getElementById('cornerScale');if(sl)sl.value=v;
-  const lbl=document.getElementById('cornerScaleVal');if(lbl)lbl.textContent=Math.round(v*100)+'%';
+  const sc=(P.cornerS&&P.cornerS.scale)||(P.cornerN&&P.cornerN.scale)||1.25;
+  const xin=(P.cornerN&&P.cornerN.xp!=null)?Math.round(P.cornerN.xp):4;
+  const yin=(P.cornerN&&P.cornerN.yp!=null)?Math.round(P.cornerN.yp):4;
+  const s=document.getElementById('cornerScale');if(s)s.value=sc;
+  const x=document.getElementById('cornerX');if(x)x.value=xin;
+  const y=document.getElementById('cornerY');if(y)y.value=yin;
+  document.getElementById('cornerScaleVal').textContent=Math.round(sc*100)+'%';
+  document.getElementById('cornerXVal').textContent=xin+'%';
+  document.getElementById('cornerYVal').textContent=yin+'%';
 }
 
 function toggleEditPos(){
   editPos=!editPos;
   document.body.classList.toggle('editpos',editPos);
-  if(editPos)syncCornerScaleSlider();
+  if(editPos){
+    const P=ovPos();
+    const anySet=['cornerN','cornerW','cornerE','cornerS'].some(id=>P[id]&&(P[id].xp!=null||P[id].scale));
+    syncCornerControls();
+    if(!anySet)applyCornerLayout(true);   // 起始:四家 125% 對稱排列
+  }
   document.getElementById('editPosBtn').classList.toggle('btn-gold',editPos);
   document.getElementById('editPosBtn').classList.toggle('btn-outline',!editPos);
 }
@@ -1267,12 +1299,14 @@ function renderBroadcast(){
 
   // ── 四角座位小卡 ──
   const lrank=lifetimeRankMap();   // RANK 以歷史總累積排行為準
+  const lifeScore={};lifetimeStats().forEach(p=>lifeScore[p.id]=p.score); // 當季累積分數
   ['cornerN','cornerW','cornerE','cornerS'].forEach(id=>document.getElementById(id).innerHTML='');
   s.seats.forEach((_,i)=>{
     const pid=currentOccupant(s,i);
     const el=document.getElementById(seatToCorner[i]);
     const isDealer=i===r.dealer;
-    const scoreCls=t[i].score>0?'p':t[i].score<0?'n':'';
+    const cscore=lifeScore[pid]||0;                 // 顯示當季累積分數
+    const scoreCls=cscore>0?'p':cscore<0?'n':'';
     const posClass={cornerN:'c-north',cornerW:'c-west',cornerE:'c-east',cornerS:'c-south'}[seatToCorner[i]];
     el.className='bc-corner '+posClass+(isDealer?' dealer':'');
     el.innerHTML=`
@@ -1282,7 +1316,7 @@ function renderBroadcast(){
       </div>
       <div class="bot">
         <div class="wind">${seatWind(s,i)}</div>
-        <div class="sc ${scoreCls}">${t[i].score>0?'+':''}${t[i].score}</div>
+        <div class="sc ${scoreCls}">${cscore>0?'+':''}${cscore.toLocaleString()}</div>
       </div>`;
   });
   bindDrag();
