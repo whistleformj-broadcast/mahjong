@@ -23,6 +23,7 @@ body.ovview #overlayView{padding:0;min-height:100vh}
 body.ovview #broadcast{width:min(100vw, calc(100vh * 16 / 9));aspect-ratio:16 / 9;height:auto;min-height:0;margin:0 auto}
 body.ovview #cardsLayout{padding:24px;box-sizing:border-box}
 body.editpos #broadcast{outline:2px dashed rgba(216,169,78,.45);outline-offset:-2px}  /* 編輯時顯示 16:9 舞台邊界 */
+body.editpos .bc-corner.sel{outline:3px solid var(--gold)!important;box-shadow:0 0 0 4px rgba(216,169,78,.4);z-index:8}
 body.outputmode .ov-tools,body.outputmode .editpos-bar{display:none!important} /* OBS 輸出:隱藏底部按鈕/編輯列 */
 
 .topbar{display:flex;align-items:center;gap:12px;padding:14px 20px;background:var(--felt-deep);border-bottom:2px solid rgba(216,169,78,.35);flex-wrap:wrap}
@@ -243,7 +244,7 @@ body.greenscreen .ov-foot{display:none}
     </div>
     <div class="steplabel">選擇四位玩家與座位(名冊沒有的先到「玩家與歷史」新增)</div>
     <div class="grid4">
-      <div><label>東風位</label><select id="seat0"></select></div>
+      <div><label>東風位(直播)</label><select id="seat0"></select></div>
       <div><label>南風位</label><select id="seat1"></select></div>
       <div><label>西風位</label><select id="seat2"></select></div>
       <div><label>北風位</label><select id="seat3"></select></div>
@@ -269,7 +270,7 @@ body.greenscreen .ov-foot{display:none}
       <h2 id="reseatTitle">設定座位</h2>
       <div style="font-size:13px;color:rgba(246,241,227,.7);line-height:1.7;margin-bottom:12px">重新指定這一將的東南西北。留在桌上的人分數繼續累積;換上的新人從目前分數接手(新加入者為 0);換下的人分數封存保留。東家為這一將的起莊。</div>
       <div class="grid4">
-        <div><label>東風位</label><select id="rs0"></select></div>
+        <div><label>東風位(直播)</label><select id="rs0"></select></div>
         <div><label>南風位</label><select id="rs1"></select></div>
         <div><label>西風位</label><select id="rs2"></select></div>
         <div><label>北風位</label><select id="rs3"></select></div>
@@ -392,18 +393,18 @@ body.greenscreen .ov-foot{display:none}
     <div class="bc-hint" id="bcHint"></div>
   </div>
   <div class="editpos-bar">
-    <span><b>編輯版面模式</b>・拖曳可移動,拖右下角金色把手可縮放</span>
-    <div style="display:flex;align-items:center;gap:14px;font-size:12.5px;white-space:nowrap;flex-wrap:wrap">
-      <span style="color:var(--gold);font-weight:700">四家小卡</span>
-      <label style="display:flex;align-items:center;gap:5px">大小
-        <input type="range" id="cornerScale" min="0.6" max="2.5" step="0.05" value="1.25" style="width:90px" oninput="applyCornerLayout(false)" onchange="applyCornerLayout(true)">
+    <span><b>編輯版面模式</b>・點小卡選取後用 X/Y 調位置;大小統一四家</span>
+    <div style="display:flex;align-items:center;gap:12px;font-size:12.5px;white-space:nowrap;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:5px">四家大小
+        <input type="range" id="cornerScale" min="0.6" max="2.5" step="0.05" value="1.25" style="width:88px" oninput="setCornerSizeAll(false)" onchange="setCornerSizeAll(true)">
         <span id="cornerScaleVal" style="min-width:38px;color:var(--gold);font-weight:700">125%</span></label>
+      <span id="cornerSel" style="color:#8FD0FF;font-weight:700">未選取(點小卡)</span>
       <label style="display:flex;align-items:center;gap:5px">X軸
-        <input type="range" id="cornerX" min="1" max="45" step="1" value="4" style="width:80px" oninput="applyCornerLayout(false)" onchange="applyCornerLayout(true)">
-        <span id="cornerXVal" style="min-width:32px;color:var(--gold);font-weight:700">4%</span></label>
+        <input type="range" id="cornerX" min="0" max="92" step="0.5" value="4" style="width:90px" oninput="applySelectedXY(false)" onchange="applySelectedXY(true)">
+        <span id="cornerXVal" style="min-width:34px;color:var(--gold);font-weight:700">—</span></label>
       <label style="display:flex;align-items:center;gap:5px">Y軸
-        <input type="range" id="cornerY" min="1" max="45" step="1" value="4" style="width:80px" oninput="applyCornerLayout(false)" onchange="applyCornerLayout(true)">
-        <span id="cornerYVal" style="min-width:32px;color:var(--gold);font-weight:700">4%</span></label>
+        <input type="range" id="cornerY" min="0" max="92" step="0.5" value="4" style="width:90px" oninput="applySelectedXY(false)" onchange="applySelectedXY(true)">
+        <span id="cornerYVal" style="min-width:34px;color:var(--gold);font-weight:700">—</span></label>
     </div>
     <button class="btn btn-outline btn-sm" onclick="resetPositions()">回復預設</button>
     <button class="btn btn-gold btn-sm" onclick="toggleEditPos()">完成 ✓</button>
@@ -1131,42 +1132,67 @@ function applyPositions(){
 
 /* 一次把四家選手小卡設成相同比例 */
 /* 一次把四家小卡設成相同大小 + 對稱位置(X軸=左右邊距、Y軸=上下邊距,單位%)*/
-function applyCornerLayout(doSave){
+let selectedCorner=null;
+const CORNER_IDS=['cornerN','cornerW','cornerE','cornerS'];
+const CORNER_NAME={cornerN:'左上(北)',cornerW:'右上(西)',cornerE:'右下(南)',cornerS:'左下(東)'};
+
+/* 起始:四家以統一大小對稱排列(第一次進編輯模式用)*/
+function initCornerLayout(doSave){
   const stage=document.getElementById('broadcast').getBoundingClientRect();
   const size=+(document.getElementById('cornerScale').value)||1.25;
-  const xin=+(document.getElementById('cornerX').value)||4;
-  const yin=+(document.getElementById('cornerY').value)||4;
-  document.getElementById('cornerScaleVal').textContent=Math.round(size*100)+'%';
-  document.getElementById('cornerXVal').textContent=xin+'%';
-  document.getElementById('cornerYVal').textContent=yin+'%';
+  const xin=4,yin=4;
   const P=ovPos();
-  const CS=['cornerN','cornerW','cornerE','cornerS'];
-  // 先套 scale 才能量到縮放後的實際大小
-  CS.forEach(id=>{P[id]=Object.assign(P[id]||{},{scale:+size.toFixed(3)})});
+  CORNER_IDS.forEach(id=>{P[id]=Object.assign(P[id]||{},{scale:+size.toFixed(3)})});
   applyPositions();
   if(!stage.width)return;
   const ref=document.getElementById('cornerS').getBoundingClientRect();
   const cw=ref.width/stage.width*100, ch=ref.height/stage.height*100;
   const set=(id,xp,yp)=>{P[id]=Object.assign(P[id]||{},{xp:+xp.toFixed(3),yp:+yp.toFixed(3),scale:+size.toFixed(3)})};
-  set('cornerN', xin, yin);                // 左上(北)
-  set('cornerW', 100-xin-cw, yin);         // 右上(西)
-  set('cornerS', xin, 100-yin-ch);         // 左下(東)
-  set('cornerE', 100-xin-cw, 100-yin-ch);  // 右下(南)
+  set('cornerN',xin,yin);set('cornerW',100-xin-cw,yin);set('cornerS',xin,100-yin-ch);set('cornerE',100-xin-cw,100-yin-ch);
   applyPositions();
   if(doSave)savePos();
 }
-/* 進編輯模式時,把三個滑桿同步到目前狀態(未設過則預設 125% / 4% / 4%)*/
-function syncCornerControls(){
+
+/* 大小:四家統一 */
+function setCornerSizeAll(doSave){
+  const v=+document.getElementById('cornerScale').value||1.25;
   const P=ovPos();
-  const sc=(P.cornerS&&P.cornerS.scale)||(P.cornerN&&P.cornerN.scale)||1.25;
-  const xin=(P.cornerN&&P.cornerN.xp!=null)?Math.round(P.cornerN.xp):4;
-  const yin=(P.cornerN&&P.cornerN.yp!=null)?Math.round(P.cornerN.yp):4;
-  const s=document.getElementById('cornerScale');if(s)s.value=sc;
-  const x=document.getElementById('cornerX');if(x)x.value=xin;
-  const y=document.getElementById('cornerY');if(y)y.value=yin;
-  document.getElementById('cornerScaleVal').textContent=Math.round(sc*100)+'%';
-  document.getElementById('cornerXVal').textContent=xin+'%';
-  document.getElementById('cornerYVal').textContent=yin+'%';
+  CORNER_IDS.forEach(id=>{P[id]=Object.assign(P[id]||{},{scale:+v.toFixed(3)})});
+  document.getElementById('cornerScaleVal').textContent=Math.round(v*100)+'%';
+  applyPositions();
+  if(doSave)savePos();
+}
+
+/* 點選一張小卡 → 之後 X/Y 只控制它 */
+function selectCorner(id){
+  if(!CORNER_IDS.includes(id))return;
+  selectedCorner=id;
+  CORNER_IDS.forEach(c=>{const el=document.getElementById(c);if(el)el.classList.toggle('sel',c===id)});
+  const P=ovPos();const p=P[id]||{};
+  if(p.xp==null){ // 尚未定位 → 由目前實際位置換算
+    const stage=document.getElementById('broadcast').getBoundingClientRect();
+    const r=document.getElementById(id).getBoundingClientRect();
+    p.xp=+((r.left-stage.left)/stage.width*100).toFixed(3);
+    p.yp=+((r.top-stage.top)/stage.height*100).toFixed(3);
+    P[id]=Object.assign(P[id]||{},p);
+  }
+  const sel=document.getElementById('cornerSel');if(sel)sel.textContent='已選:'+CORNER_NAME[id];
+  const x=document.getElementById('cornerX'),y=document.getElementById('cornerY');
+  if(x)x.value=p.xp; if(y)y.value=p.yp;
+  document.getElementById('cornerXVal').textContent=Math.round(p.xp)+'%';
+  document.getElementById('cornerYVal').textContent=Math.round(p.yp)+'%';
+}
+
+/* X/Y:只套用到目前選取的那張卡 */
+function applySelectedXY(doSave){
+  if(!selectedCorner){toast('請先點一張小卡來選取');return;}
+  const P=ovPos();
+  const x=+document.getElementById('cornerX').value, y=+document.getElementById('cornerY').value;
+  P[selectedCorner]=Object.assign(P[selectedCorner]||{},{xp:+x.toFixed(3),yp:+y.toFixed(3)});
+  document.getElementById('cornerXVal').textContent=Math.round(x)+'%';
+  document.getElementById('cornerYVal').textContent=Math.round(y)+'%';
+  applyPositions();
+  if(doSave)savePos();
 }
 
 function toggleEditPos(){
@@ -1174,9 +1200,16 @@ function toggleEditPos(){
   document.body.classList.toggle('editpos',editPos);
   if(editPos){
     const P=ovPos();
-    const anySet=['cornerN','cornerW','cornerE','cornerS'].some(id=>P[id]&&(P[id].xp!=null||P[id].scale));
-    syncCornerControls();
-    if(!anySet)applyCornerLayout(true);   // 起始:四家 125% 對稱排列
+    const anySet=CORNER_IDS.some(id=>P[id]&&(P[id].xp!=null||P[id].scale));
+    selectedCorner=null;
+    CORNER_IDS.forEach(c=>{const el=document.getElementById(c);if(el)el.classList.remove('sel')});
+    const sc=(P.cornerS&&P.cornerS.scale)||1.25;
+    const ss=document.getElementById('cornerScale');if(ss)ss.value=sc;
+    document.getElementById('cornerScaleVal').textContent=Math.round(sc*100)+'%';
+    document.getElementById('cornerSel').textContent='未選取(點小卡)';
+    document.getElementById('cornerXVal').textContent='—';
+    document.getElementById('cornerYVal').textContent='—';
+    if(!anySet){if(ss)ss.value=1.25;initCornerLayout(true);}   // 起始:四家 125% 對稱排列
   }
   document.getElementById('editPosBtn').classList.toggle('btn-gold',editPos);
   document.getElementById('editPosBtn').classList.toggle('btn-outline',!editPos);
@@ -1190,6 +1223,7 @@ async function resetPositions(){
 function startDrag(e){
   if(!editPos)return;
   const el=e.currentTarget;
+  if(['cornerN','cornerW','cornerE','cornerS'].includes(el.id))selectCorner(el.id);
   e.preventDefault();
   const parent=document.getElementById('broadcast').getBoundingClientRect();
   const rect=el.getBoundingClientRect();
