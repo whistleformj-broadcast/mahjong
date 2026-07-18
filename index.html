@@ -17,6 +17,8 @@
 body{font-family:'Noto Sans TC',sans-serif;background:var(--felt);color:var(--ivory);min-height:100vh}
 body.greenscreen{background:#00FF00}
 body.greenscreen .topbar,body.greenscreen #controlView,body.greenscreen #historyView{display:none!important}
+body.ovview .topbar{display:none}                       /* 直播畫面:隱藏版頭橫幅(預覽與輸出一致)*/
+body.outputmode .ov-tools,body.outputmode .editpos-bar{display:none!important} /* OBS 輸出:隱藏底部按鈕/編輯列 */
 
 .topbar{display:flex;align-items:center;gap:12px;padding:14px 20px;background:var(--felt-deep);border-bottom:2px solid rgba(216,169,78,.35);flex-wrap:wrap}
 .topbar h1{font-size:18px;font-weight:900;letter-spacing:2px;color:var(--gold)}
@@ -108,6 +110,7 @@ body.greenscreen .bc-hint{display:none}
 /* ── 編輯位置模式 ── */
 body.editpos .bc-corner,body.editpos .bc-summary,body.editpos .bc-title{cursor:move;outline:2px dashed var(--gold);outline-offset:3px;transition:outline-color .2s}
 body.editpos .bc-corner:hover,body.editpos .bc-summary:hover,body.editpos .bc-title:hover{outline-color:#fff;outline-style:solid}
+body.editpos .bc-corner::before,body.editpos .bc-summary::before,body.editpos .bc-title::before{content:'';position:absolute;right:-3px;bottom:-3px;width:16px;height:16px;background:linear-gradient(135deg,transparent 45%,var(--gold) 45%);border-radius:0 0 6px 0;cursor:nwse-resize;z-index:6;pointer-events:none}
 body.editpos .bc-corner::after,body.editpos .bc-summary::after,body.editpos .bc-title::after{content:'✥ 拖曳';position:absolute;top:-22px;left:0;font-size:11px;color:var(--gold);background:rgba(9,20,15,.9);padding:2px 6px;border-radius:4px;white-space:nowrap;pointer-events:none}
 .editpos-bar{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:50;background:rgba(9,20,15,.95);border:1px solid var(--gold);border-radius:10px;padding:10px 16px;display:none;align-items:center;gap:12px;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.5)}
 body.editpos .editpos-bar{display:flex}
@@ -177,6 +180,9 @@ body.greenscreen .ov-head .sub{color:#043;font-weight:900}
 .tile .stats .s-gun{background:#F6DBD7;color:#8C2A20}
 .tile .life{margin-top:10px;padding-top:8px;border-top:1px dashed #D8CEB2;font-size:12px;color:#6B6551;display:flex;justify-content:space-between}
 .tile .life b{color:#22201A}
+tr.penrow{background:rgba(193,59,46,.12)}
+tr.penrow td{color:#E8A0A0}
+tr.penrow td.round{color:#C13B2E;font-weight:900}
 .tile.offseat{opacity:.82}
 .tile.offseat .seatwind{color:#B0A986;background:#EDE6D2;border-radius:4px;padding:1px 6px;display:inline-block}
 .tile.flash{animation:pop .6s ease}
@@ -340,7 +346,7 @@ body.greenscreen .ov-foot{display:none}
   <div class="panel">
     <h2>累積總戰績(所有牌局)</h2>
     <table>
-      <thead><tr><th>排名</th><th>玩家</th><th>場數</th><th>累積總分</th><th>自摸</th><th>胡牌</th><th>放槍</th><th>場均</th></tr></thead>
+      <thead><tr><th>排名</th><th>玩家</th><th>將數</th><th>累積總分</th><th>自摸</th><th>胡牌</th><th>放槍</th><th>將均</th></tr></thead>
       <tbody id="lifetimeBody"></tbody>
     </table>
   </div>
@@ -381,7 +387,7 @@ body.greenscreen .ov-foot{display:none}
     <div class="bc-hint" id="bcHint"></div>
   </div>
   <div class="editpos-bar">
-    <span><b>編輯位置模式</b>・直接拖曳表格或小卡到想要的位置</span>
+    <span><b>編輯版面模式</b>・拖曳元素可移動,拖<b style="color:var(--gold)">右下角金色把手</b>可縮放大小</span>
     <button class="btn btn-outline btn-sm" onclick="resetPositions()">回復預設</button>
     <button class="btn btn-gold btn-sm" onclick="toggleEditPos()">完成 ✓</button>
   </div>
@@ -408,8 +414,7 @@ body.greenscreen .ov-foot{display:none}
       <div class="sub" id="ovRound"></div>
     </div>
     <div class="tiles" id="tiles"></div>
-    <div class="ov-foot" id="ovFoot">自摸三家付・放槍一家付・莊家1台+連N拉N・下排為歷史累積戰績</div>
-    <div class="ss-pill" id="ssPill">● 自動輪播中</div>
+      <div class="ss-pill" id="ssPill">● 自動輪播中</div>
   </div>
 </div>
 
@@ -523,6 +528,7 @@ function normalize(d){
     delete s.subs;
   });
   d.currentId=d.currentId||null;
+  d.overlayPos=d.overlayPos||{};
   return d;
 }
 function setBadge(txt,color){const b=document.getElementById('connBadge');b.textContent=txt;b.style.borderColor=color;b.style.color=color}
@@ -733,15 +739,19 @@ function handWinAmount(s,h,st){
 }
 function lifetimeStats(){
   const m={};
-  db.roster.forEach(p=>m[p.id]={id:p.id,name:p.name,games:0,score:0,zimo:0,ron:0,gun:0});
+  db.roster.forEach(p=>m[p.id]={id:p.id,name:p.name,games:0,jiangs:0,score:0,zimo:0,ron:0,gun:0});
   db.sessions.forEach(s=>{
     const pt=playerTotals(s);
+    const r=replay(s);
+    const jset=new Set();
+    r.states.forEach(st=>jset.add(Math.floor(st.passes/16)+1)); // 有打過牌的『將』
     allOccupants(s).forEach(pid=>{
       if(!m[pid]||!pt[pid])return;
       const st=pt[pid];
       m[pid].games++;m[pid].score+=st.score;
       m[pid].zimo+=st.zimo;m[pid].ron+=st.ron;m[pid].gun+=st.gun;
     });
+    jset.forEach(j=>{seatingForJiang(s,j).forEach(pid=>{if(m[pid])m[pid].jiangs++})});
   });
   return Object.values(m);
 }
@@ -961,7 +971,7 @@ function addPenalty(){
   if(!caller||!discarder){toast('請選擇喊碰的人與出牌的人');return}
   if(caller===discarder){toast('喊碰的人與出牌的人不能同一人');return}
   s.penalties=s.penalties||[];
-  s.penalties.push({caller,discarder,points:1,jiang:currentJiang(s)});
+  s.penalties.push({caller,discarder,points:1,jiang:currentJiang(s),afterHand:s.hands.length,ts:Date.now()});
   save();
   toast('罰點:'+nameOf(caller)+' 賠 '+nameOf(discarder)+' 1 點');
 }
@@ -1027,10 +1037,22 @@ function render(){
       }else penListEl.textContent='本場尚無罰點';
     }
     const tb=document.getElementById('historyBody');
-    tb.innerHTML=s.hands.length?'':'<tr><td colspan="7" style="color:var(--muted)">尚無紀錄</td></tr>';
-    s.hands.map((h,idx)=>({h,idx})).reverse().forEach(({h,idx})=>{
-      const st=replay(s).states[idx];
+    // 合併「胡牌記錄」與「喊碰不碰罰點」,依發生順序(afterHand)交錯,新的在上
+    const events=[];
+    s.hands.forEach((h,idx)=>events.push({kind:'hand',h,idx,key:idx}));
+    pens.forEach((p,pi)=>{const ah=(p.afterHand!=null?p.afterHand:s.hands.length);events.push({kind:'pen',p,pi,key:ah-0.5+pi*1e-6})});
+    events.sort((a,b)=>b.key-a.key);
+    tb.innerHTML=events.length?'':'<tr><td colspan="7" style="color:var(--muted)">尚無紀錄</td></tr>';
+    events.forEach(ev=>{
       const tr=document.createElement('tr');
+      if(ev.kind==='pen'){
+        const p=ev.p, pts=p.points||1;
+        tr.className='penrow';
+        tr.innerHTML=`<td class="round">罰點</td><td>—</td><td class="win">${nameOf(p.discarder)}</td><td>喊碰不碰</td><td>—</td><td class="gun">${nameOf(p.caller)}</td><td>+${pts}</td>`;
+        tb.appendChild(tr);return;
+      }
+      const {h,idx}=ev;
+      const st=replay(s).states[idx];
       if(h.type==='draw'){tr.innerHTML=`<td class="round">${roundLabel(st)}</td><td>${nameOf(occupantAt(s,st.dealer,idx))}</td><td colspan="5" style="color:var(--muted)">流局・莊家連莊</td>`}
       else{
         const bonus=(h.winner===st.dealer||h.type==='ron'&&h.gun===st.dealer||h.type==='zimo')?dealerBonus(st.streak):0;
@@ -1048,7 +1070,7 @@ function render(){
   lb.innerHTML=life.length?'':'<tr><td colspan="8" style="color:var(--muted)">尚無資料</td></tr>';
   life.forEach((p,ri)=>{
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${ri+1}</td><td class="win">${p.name}</td><td>${p.games}</td><td class="${p.score>=0?'pos':'neg'}">${p.score>0?'+':''}${p.score.toLocaleString()}</td><td>${p.zimo}</td><td>${p.ron}</td><td>${p.gun}</td><td>${p.games?Math.round(p.score/p.games).toLocaleString():'—'}</td>`;
+    tr.innerHTML=`<td>${ri+1}</td><td class="win">${p.name}</td><td>${p.jiangs}</td><td class="${p.score>=0?'pos':'neg'}">${p.score>0?'+':''}${p.score.toLocaleString()}</td><td>${p.zimo}</td><td>${p.ron}</td><td>${p.gun}</td><td>${p.jiangs?Math.round(p.score/p.jiangs).toLocaleString():'—'}</td>`;
     lb.appendChild(tr);
   });
 
@@ -1067,26 +1089,26 @@ function render(){
 }
 
 /* ══ 小卡位置微調(拖曳)══ */
-const POS_KEY='mj_overlay_pos_v1';
 const DRAG_IDS=['bcSummary','bcTitle','cornerN','cornerW','cornerE','cornerS'];
-let overlayPos=loadPos();
 let editPos=false;
 
-function loadPos(){try{return JSON.parse(localStorage.getItem(POS_KEY))||{}}catch(e){return {}}}
-function savePos(){localStorage.setItem(POS_KEY,JSON.stringify(overlayPos))}
+/* 位置存進 db(隨 Firebase 同步)、用百分比定位,跨裝置與不同解析度都一致 */
+function ovPos(){db.overlayPos=db.overlayPos||{};return db.overlayPos}
+function savePos(){save();}  // 寫進雲端 + 本機,OBS 端會自動套用同一組位置
 
 function applyPositions(){
+  const P=ovPos();
   DRAG_IDS.forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
-    const p=overlayPos[id];
-    if(p){
-      // 一律改用 left/top 定位(清掉預設的 right/bottom)
-      el.style.left=p.left+'px';el.style.top=p.top+'px';
+    const p=P[id]||{};
+    if(p.xp!=null){
+      el.style.left=p.xp+'%';el.style.top=p.yp+'%';
       el.style.right='auto';el.style.bottom='auto';
     }else{
-      // 沒存過的就清掉 inline,回到 CSS 預設角落
       el.style.left='';el.style.top='';el.style.right='';el.style.bottom='';
     }
+    if(p.scale&&p.scale!==1){el.style.transformOrigin='top left';el.style.transform='scale('+p.scale+')';}
+    else{el.style.transform='';}
   });
 }
 
@@ -1098,7 +1120,7 @@ function toggleEditPos(){
 }
 async function resetPositions(){
   if(!await uiConfirm('把所有表格與小卡位置回復成預設四角?','回復預設','取消'))return;
-  overlayPos={};savePos();applyPositions();
+  db.overlayPos={};save();applyPositions();
   toast('位置已回復預設');
 }
 
@@ -1109,6 +1131,31 @@ function startDrag(e){
   const parent=document.getElementById('broadcast').getBoundingClientRect();
   const rect=el.getBoundingClientRect();
   const pt=e.touches?e.touches[0]:e;
+  // 右下角 26px 內 = 縮放;其餘 = 移動
+  const RH=26;
+  if(pt.clientX>rect.right-RH && pt.clientY>rect.bottom-RH){
+    const P=ovPos();
+    const cur=P[el.id]||{};
+    const curScale=cur.scale||1;
+    const baseW=rect.width/curScale, baseH=rect.height/curScale;
+    const aL=rect.left, aT=rect.top;
+    if(cur.xp==null){ // 尚未定位 → 先把目前位置轉成 left/top 錨定
+      const left=rect.left-parent.left, top=rect.top-parent.top;
+      P[el.id]=Object.assign(cur,{xp:+(left/parent.width*100).toFixed(3),yp:+(top/parent.height*100).toFixed(3)});
+      applyPositions();
+    }
+    const rmove=ev=>{
+      const p=ev.touches?ev.touches[0]:ev;
+      let sc=Math.max((p.clientX-aL)/baseW,(p.clientY-aT)/baseH);
+      sc=Math.max(0.4,Math.min(3.5,sc));
+      P[el.id]=Object.assign(P[el.id]||{},{scale:+sc.toFixed(3)});
+      el.style.transformOrigin='top left';el.style.transform='scale('+sc+')';
+    };
+    const rup=()=>{document.removeEventListener('mousemove',rmove);document.removeEventListener('mouseup',rup);document.removeEventListener('touchmove',rmove);document.removeEventListener('touchend',rup);savePos();};
+    document.addEventListener('mousemove',rmove);document.addEventListener('mouseup',rup);
+    document.addEventListener('touchmove',rmove,{passive:false});document.addEventListener('touchend',rup);
+    return;
+  }
   const offX=pt.clientX-rect.left, offY=pt.clientY-rect.top;
   function move(ev){
     const p=ev.touches?ev.touches[0]:ev;
@@ -1118,7 +1165,7 @@ function startDrag(e){
     left=Math.max(0,Math.min(left,parent.width-rect.width));
     top=Math.max(0,Math.min(top,parent.height-rect.height));
     el.style.left=left+'px';el.style.top=top+'px';el.style.right='auto';el.style.bottom='auto';
-    overlayPos[el.id]={left:Math.round(left),top:Math.round(top)};
+    ovPos()[el.id]={xp:+(left/parent.width*100).toFixed(3),yp:+(top/parent.height*100).toFixed(3)};
   }
   function up(){
     document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);
@@ -1245,7 +1292,7 @@ function renderOverlay(){
         <div class="pname">${nameOf(p.pid)}</div>
         <div class="score ${p.score>0?'pos':p.score<0?'neg':''}">${p.score>0?'+':''}${p.score.toLocaleString()}</div>
         <div class="stats"><span class="s-zimo">自摸 ${p.zimo}</span><span>胡牌 ${p.ron}</span><span class="s-gun">放槍 ${p.gun}</span></div>
-        <div class="life"><span>歷史累積 <b>${lf.score>0?'+':''}${lf.score.toLocaleString()}</b></span><span>${lf.games} 場</span></div>`;
+        <div class="life"><span>歷史累積 <b>${lf.score>0?'+':''}${lf.score.toLocaleString()}</b></span><span>${lf.jiangs} 將</span></div>`;
       tiles.appendChild(d);
     });
     const nextSt={dealer:r.dealer,streak:r.streak,passes:r.passes};
@@ -1283,8 +1330,9 @@ function renderOverlay(){
         : `<div class="lb-col" style="max-width:820px;margin:0 auto">${tbl(left,1)}</div>`;
       tiles.innerHTML=`<div class="lb-wrap">${inner}</div>`;
     }
-    document.getElementById('ovTitle').textContent='🏆 總累積開心榜';
-    document.getElementById('ovRound').textContent='總分 & 每將平均數據・共 '+db.sessions.length+' 場'+(cs?'(紅=今日上升 / 綠=今日下降)':'');
+    document.getElementById('ovTitle').textContent='🏆 本季積分榜';
+    const totalJiangs=db.sessions.reduce((a,ss)=>{const rr=replay(ss);const js=new Set();rr.states.forEach(st=>js.add(Math.floor(st.passes/16)+1));return a+js.size;},0);
+    document.getElementById('ovRound').textContent='總分 & 每將平均數據・共 '+totalJiangs+' 將'+(cs?'(紅=今日上升 / 綠=今日下降)':'');
   }
   // 輪播提示 pill:顯示下一張
   const pill=document.getElementById('ssPill');
@@ -1319,6 +1367,7 @@ function showView(v){
   document.getElementById('historyView').style.display=v==='history'?'block':'none';
   document.getElementById('overlayView').style.display=v==='overlay'?'block':'none';
   ['Control','History','Overlay'].forEach(n=>document.getElementById('tab'+n).classList.toggle('active',n.toLowerCase()===v));
+  document.body.classList.toggle('ovview',v==='overlay');
   if(v!=='overlay'){document.body.classList.remove('greenscreen');stopSlideshow();}
 }
 /* ── 自動輪播(開播前 / 中場 / 選位子階段的螢幕保護)── */
@@ -1407,6 +1456,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')document.body.classL
 window.addEventListener('storage',e=>{if(e.key===KEY&&!fbRef){try{db=normalize(JSON.parse(localStorage.getItem(KEY)));render()}catch(x){}}});
 
 const params=new URLSearchParams(location.search);
+if(params.get('view')==='overlay'||params.get('green')==='1'||params.get('ss')==='1'){document.body.classList.add('outputmode');}
 if(params.get('view')==='overlay'){showView('overlay')}
 if(params.get('green')==='1'){showView('overlay');toggleGreen()}
 initStore();render();
