@@ -24,6 +24,10 @@ body.ovview #broadcast{width:min(100vw, calc(100vh * 16 / 9));aspect-ratio:16 / 
 body.ovview #cardsLayout{padding:24px;box-sizing:border-box}
 body.editpos #broadcast{outline:2px dashed rgba(216,169,78,.45);outline-offset:-2px}  /* 編輯時顯示 16:9 舞台邊界 */
 body.editpos .bc-corner.sel{outline:3px solid var(--gold)!important;box-shadow:0 0 0 4px rgba(216,169,78,.4);z-index:8}
+.collapsible .collhead{cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between}
+.collapsible .caret{transition:transform .18s;font-size:14px;color:var(--gold)}
+.collapsible.collapsed .caret{transform:rotate(-90deg)}
+.collapsible.collapsed .panel-body{display:none}
 body.outputmode .ov-tools,body.outputmode .editpos-bar{display:none!important} /* OBS 輸出:隱藏底部按鈕/編輯列 */
 
 .topbar{display:flex;align-items:center;gap:12px;padding:14px 20px;background:var(--felt-deep);border-bottom:2px solid rgba(216,169,78,.35);flex-wrap:wrap}
@@ -313,18 +317,44 @@ body.greenscreen .ov-foot{display:none}
       </div>
     </div>
 
-    <div class="panel" id="penaltyPanel">
-      <h2>喊碰不碰・罰點</h2>
-      <div style="font-size:13px;color:rgba(246,241,227,.7);line-height:1.6;margin-bottom:10px">喊碰的人反悔沒碰 → 賠給出牌的人 1 點。每把可重複記錄。</div>
-      <div class="grid4">
-        <div><label>喊碰的人(賠 1 點)</label><select id="penCaller"></select></div>
-        <div><label>出牌的人(得 1 點)</label><select id="penDiscarder"></select></div>
+    <div class="panel collapsible collapsed" id="penaltyPanel">
+      <h2 class="collhead" onclick="toggleCollapse('penaltyPanel')">喊碰不碰・罰點 <span class="caret">▾</span></h2>
+      <div class="panel-body">
+        <div style="font-size:13px;color:rgba(246,241,227,.7);line-height:1.6;margin-bottom:10px">喊碰的人反悔沒碰 → 賠給出牌的人 1 點。每把可重複記錄。</div>
+        <div class="grid4">
+          <div><label>喊碰的人(賠 1 點)</label><select id="penCaller"></select></div>
+          <div><label>出牌的人(得 1 點)</label><select id="penDiscarder"></select></div>
+        </div>
+        <div class="btnrow">
+          <button class="btn btn-red" onclick="addPenalty()">＋ 記一筆(賠 1 點)</button>
+          <button class="btn btn-outline" onclick="undoPenalty()">刪除上一筆罰點</button>
+        </div>
+        <div id="penList" style="font-size:13px;color:rgba(246,241,227,.65);margin-top:8px"></div>
       </div>
-      <div class="btnrow">
-        <button class="btn btn-red" onclick="addPenalty()">＋ 記一筆(賠 1 點)</button>
-        <button class="btn btn-outline" onclick="undoPenalty()">刪除上一筆罰點</button>
+    </div>
+
+    <div class="panel collapsible collapsed" id="multiRonPanel">
+      <h2 class="collhead" onclick="toggleCollapse('multiRonPanel')">一炮三響 / 炸糊 <span class="caret">▾</span></h2>
+      <div class="panel-body">
+        <div style="font-size:13px;color:rgba(246,241,227,.7);line-height:1.6;margin-bottom:10px">一人放槍、多人同時胡牌。放槍者分別賠給每位胡牌者(各自台數)。莊家若在胡牌者之中則連莊。</div>
+        <div class="grid4">
+          <div><label>放槍(付錢的人)</label><select id="mrGun"></select></div>
+        </div>
+        <div class="steplabel">胡牌者(收錢,最多三家,各填台數)</div>
+        <div class="grid4">
+          <div><label>胡牌者 1</label><select id="mrW0"></select></div>
+          <div><label>台數</label><input id="mrT0" type="number" min="0" value="0"></div>
+          <div><label>胡牌者 2</label><select id="mrW1"></select></div>
+          <div><label>台數</label><input id="mrT1" type="number" min="0" value="0"></div>
+        </div>
+        <div class="grid4">
+          <div><label>胡牌者 3</label><select id="mrW2"></select></div>
+          <div><label>台數</label><input id="mrT2" type="number" min="0" value="0"></div>
+        </div>
+        <div class="btnrow">
+          <button class="btn btn-gold" onclick="recordMultiRon()">記錄一炮三響 🔥</button>
+        </div>
       </div>
-      <div id="penList" style="font-size:13px;color:rgba(246,241,227,.65);margin-top:8px"></div>
     </div>
 
     <div class="panel">
@@ -643,7 +673,8 @@ function replay(s){
   const states=[];
   for(const h of s.hands){
     states.push({dealer,streak,passes});
-    if(h.type==='draw'||h.winner===dealer){streak++}
+    const dealerWon = h.type==='multiron' ? (h.wins||[]).some(w=>w.seat===dealer) : (h.winner===dealer);
+    if(h.type==='draw'||dealerWon){streak++}
     else{
       streak=0;dealer=(dealer+1)%4;passes++;
       const nj=Math.floor(passes/16)+1;      // 跨到新的一將?
@@ -713,6 +744,15 @@ function playerTotals(s){
         const withBonus=(h.winner===st.dealer)||(i===st.dealer);
         const amt=pay(h.tai+(withBonus?bonus:0));
         P.score-=amt;W.score+=amt;
+      });
+    }else if(h.type==='multiron'){
+      // 一炮三響/炸糊:放槍者(gun)分別賠給每位胡牌者
+      const G=occ(h.gun);
+      (h.wins||[]).forEach(w=>{
+        const W=occ(w.seat);
+        const withBonus=(w.seat===st.dealer)||(h.gun===st.dealer);
+        const amt=pay((w.tai||0)+(withBonus?bonus:0));
+        W.ron++;W.score+=amt;G.gun++;G.score-=amt;
       });
     }else{
       const W=occ(h.winner),G=occ(h.gun);
@@ -981,6 +1021,32 @@ function undoHand(){
   s.hands.pop();save();updateForm();
 }
 
+/* ── 一炮三響 / 炸糊 ── */
+function recordMultiRon(){
+  const s=curSession();if(!s)return;
+  const gv=document.getElementById('mrGun').value;
+  if(gv===''){toast('請選放槍(付錢)的人');return;}
+  const gunSeat=+gv;
+  const wins=[];
+  for(let k=0;k<3;k++){
+    const wv=document.getElementById('mrW'+k).value;
+    if(wv==='')continue;
+    const seat=+wv;
+    const tai=Math.max(0,+document.getElementById('mrT'+k).value||0);
+    wins.push({seat,tai});
+  }
+  if(!wins.length){toast('至少要一位胡牌者');return;}
+  const seats=wins.map(w=>w.seat);
+  if(seats.includes(gunSeat)){toast('放槍者不能同時是胡牌者');return;}
+  if(new Set(seats).size!==seats.length){toast('胡牌者不可重複');return;}
+  s.hands.push({type:'multiron',gun:gunSeat,wins});
+  // 清空欄位
+  ['mrW0','mrW1','mrW2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['mrT0','mrT1','mrT2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=0;});
+  save();updateForm();
+  toast('已記錄一炮三響('+wins.length+' 家胡牌)');
+}
+
 /* ── 喊碰不碰罰點 ── */
 function addPenalty(){
   const s=curSession();if(!s)return;
@@ -1030,6 +1096,7 @@ function render(){
     const needSeating=!hasSeatingForCur; // 第 1 將已於開局指定
     document.getElementById('reseatPanel').style.display=needSeating?'block':'none';
     document.getElementById('recordPanel').style.display=needSeating?'none':'block';
+    document.getElementById('multiRonPanel').style.display=needSeating?'none':'block';
     document.getElementById('penaltyPanel').style.display=needSeating?'none':'block';
     if(needSeating){
       document.getElementById('reseatTitle').textContent='第 '+curJ+' 將・設定座位(換人 / 輪座位)';
@@ -1046,6 +1113,9 @@ function render(){
     // 喊碰不碰:填入四家下拉 + 顯示本場罰點
     const penOpts='<option value="">— 選擇 —</option>'+s.seats.map((_,i)=>{const pid=currentOccupant(s,i);return `<option value="${pid}">${nameOf(pid)}(${seatWind(s,i)})</option>`}).join('');
     ['penCaller','penDiscarder'].forEach(id=>{const el=document.getElementById(id);if(el){const v=el.value;el.innerHTML=penOpts;if([...el.options].some(o=>o.value===v))el.value=v;}});
+    // 一炮三響下拉:值為座位 index
+    const seatOpts='<option value="">— 選擇 —</option>'+s.seats.map((_,i)=>`<option value="${i}">${nameOf(currentOccupant(s,i))}(${seatWind(s,i)})</option>`).join('');
+    ['mrGun','mrW0','mrW1','mrW2'].forEach(id=>{const el=document.getElementById(id);if(el){const v=el.value;el.innerHTML=seatOpts;if([...el.options].some(o=>o.value===v))el.value=v;}});
     const pens=s.penalties||[];
     const penListEl=document.getElementById('penList');
     if(penListEl){
@@ -1071,6 +1141,18 @@ function render(){
       }
       const {h,idx}=ev;
       const st=replay(s).states[idx];
+      if(h.type==='multiron'){
+        const bonus=dealerBonus(st.streak);
+        let total=0;
+        const parts=(h.wins||[]).map(w=>{
+          const wb=(w.seat===st.dealer)||(h.gun===st.dealer);
+          const amt=s.base+((w.tai||0)+(wb?bonus:0))*s.perTai; // 顯示用(與 pay 一致)
+          total+=amt;
+          return nameOf(occupantAt(s,w.seat,idx))+' '+(w.tai||0)+'台';
+        });
+        tr.innerHTML=`<td class="round">${roundLabel(st)}</td><td>${nameOf(occupantAt(s,st.dealer,idx))}</td><td class="win">${parts.map(p=>p.split(' ')[0]).join('、')}</td><td>🔥一炮三響</td><td>${(h.wins||[]).map(w=>w.tai||0).join('/')}</td><td class="gun">${nameOf(occupantAt(s,h.gun,idx))}</td><td>+${total.toLocaleString()}</td>`;
+        tb.appendChild(tr);return;
+      }
       if(h.type==='draw'){tr.innerHTML=`<td class="round">${roundLabel(st)}</td><td>${nameOf(occupantAt(s,st.dealer,idx))}</td><td colspan="5" style="color:var(--muted)">流局・莊家連莊</td>`}
       else{
         const bonus=(h.winner===st.dealer||h.type==='ron'&&h.gun===st.dealer||h.type==='zimo')?dealerBonus(st.streak):0;
@@ -1195,6 +1277,11 @@ function applySelectedXY(doSave){
   if(doSave)savePos();
 }
 
+function toggleCollapse(id){
+  const el=document.getElementById(id);
+  if(el)el.classList.toggle('collapsed');
+}
+
 function toggleEditPos(){
   editPos=!editPos;
   document.body.classList.toggle('editpos',editPos);
@@ -1258,9 +1345,10 @@ function startDrag(e){
     const p=ev.touches?ev.touches[0]:ev;
     let left=p.clientX-parent.left-offX;
     let top=p.clientY-parent.top-offY;
-    // 限制在畫面內
-    left=Math.max(0,Math.min(left,parent.width-rect.width));
-    top=Math.max(0,Math.min(top,parent.height-rect.height));
+    // 限制:至少保留 40px 在 16:9 框內(可貼齊/推到最右邊,超寬元件也不會卡死)
+    const minVis=40;
+    left=Math.max(minVis-rect.width,Math.min(left,parent.width-minVis));
+    top=Math.max(minVis-rect.height,Math.min(top,parent.height-minVis));
     el.style.left=left+'px';el.style.top=top+'px';el.style.right='auto';el.style.bottom='auto';
     ovPos()[el.id]=Object.assign(ovPos()[el.id]||{},{xp:+(left/parent.width*100).toFixed(3),yp:+(top/parent.height*100).toFixed(3)}); // 合併保留 scale
   }
