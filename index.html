@@ -220,6 +220,29 @@ tr.penrow td.round{color:#C13B2E;font-weight:900}
   60%{opacity:1;transform:translate(-50%,-34px) scale(1.1)}
   100%{opacity:0;transform:translate(-50%,-64px) scale(.8)}
 }
+/* 11台以上:隕石 */
+.meteor{position:absolute;width:16px;height:16px;z-index:30;pointer-events:none;
+  transform:translate(-50%,-50%) rotate(var(--ang));
+  animation:meteorFly .72s cubic-bezier(.5,.05,.85,.35) forwards}
+.meteor .ball{position:absolute;inset:0;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#fff,#FFE08A 38%,#FF7A00 70%,#FF2D00);
+  box-shadow:0 0 12px 5px rgba(255,106,0,.9),0 0 26px 10px rgba(255,45,0,.5)}
+.meteor .tail{position:absolute;top:50%;right:100%;width:78px;height:7px;transform:translateY(-50%);
+  background:linear-gradient(90deg,transparent,rgba(255,80,0,.55),rgba(255,120,0,.9),#FFE08A);
+  border-radius:5px;filter:blur(.5px)}
+@keyframes meteorFly{
+  0%{opacity:0;transform:translate(-50%,-50%) rotate(var(--ang)) scale(.5)}
+  12%{opacity:1;transform:translate(-50%,-50%) rotate(var(--ang)) scale(1)}
+  100%{opacity:1;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) rotate(var(--ang)) scale(1)}
+}
+/* 撞擊爆炸 */
+.impact-fx{position:absolute;top:42%;left:50%;font-size:44px;z-index:31;pointer-events:none;
+  animation:boom .8s ease-out forwards;filter:drop-shadow(0 0 12px #FF6A00)}
+@keyframes boom{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}
+  25%{opacity:1;transform:translate(-50%,-50%) scale(1.35)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1.7)}
+}
 
 .ov-foot{text-align:center;margin-top:18px;font-size:13px;color:rgba(246,241,227,.55);letter-spacing:1px}
 body.greenscreen .ov-foot{display:none}
@@ -245,7 +268,7 @@ body.greenscreen .ov-foot{display:none}
 <body>
 
 <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0720-1621・大牌噴火</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0720-1630・火焰隕石</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
   <div class="tabs">
     <button id="tabControl" class="active" onclick="showView('control')">本場控制台</button>
@@ -1046,7 +1069,12 @@ function confirmHand(){
   const s=curSession();if(!s)return;
   const tai=+document.getElementById('tai').value||0;
   s.hands.push(cur.type==='draw'?{type:'draw'}:{winner:cur.winner,type:cur.type,gun:cur.gun,tai});
-  if(cur.type==='zimo'&&tai>10)db.fx={ts:Date.now(),kind:'fire'};  // 超過十台的自摸 → 噴火
+  // 特效:5–10台噴火(只在扣分者身上)、11台以上隕石(贏家砸向扣分者)
+  if((cur.type==='zimo'||cur.type==='ron')&&tai>=5){
+    const winnerSeat=cur.winner;
+    const payerSeats=cur.type==='zimo'?[0,1,2,3].filter(x=>x!==winnerSeat):[cur.gun];
+    db.fx={ts:Date.now(),kind:tai>=11?'meteor':'fire',winnerSeat,payerSeats};
+  }
   cur={winner:null,type:null,gun:null};
   document.getElementById('tai').value=1;
   save();updateForm();flashOverlay();
@@ -1631,23 +1659,65 @@ function renderOverlay(){
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
 let lastFxTs=0;
+const SEAT_TO_CORNER=['cornerS','cornerE','cornerW','cornerN']; // 座位 index → 角落卡 id
+function cornerElForSeat(seat){return document.getElementById(SEAT_TO_CORNER[seat])}
 function playFxIfAny(){
   const fx=db&&db.fx;
   if(!fx||!fx.ts||fx.ts<=lastFxTs)return;
   const fresh=(Date.now()-fx.ts)<8000;   // 太舊(重整/歷史)不補放
   lastFxTs=fx.ts;
-  if(fresh&&fx.kind==='fire')triggerFire();
+  if(!fresh)return;
+  if(fx.kind==='fire')triggerFire(fx.payerSeats||[]);
+  else if(fx.kind==='meteor')triggerMeteor(fx.winnerSeat,fx.payerSeats||[]);
 }
-function triggerFire(){
-  document.querySelectorAll('#broadcast .bc-corner').forEach(card=>{
-    card.classList.add('firing');
-    const sc=card.querySelector('.sc');
-    if(sc){sc.classList.remove('fire');void sc.offsetWidth;sc.classList.add('fire');}
-    const f=document.createElement('div');f.className='fire-fx';f.textContent='🔥';
-    card.appendChild(f);
-    setTimeout(()=>{if(f.parentNode)f.remove()},2000);
-    setTimeout(()=>{if(sc)sc.classList.remove('fire');card.classList.remove('firing')},2600);
+/* 5–10台:扣分者的分數噴火 */
+function triggerFire(seats){
+  seats.forEach(seat=>{
+    const card=cornerElForSeat(seat);if(!card)return;
+    fireCard(card);
   });
+}
+function fireCard(card){
+  card.classList.add('firing');
+  const sc=card.querySelector('.sc');
+  if(sc){sc.classList.remove('fire');void sc.offsetWidth;sc.classList.add('fire');}
+  const f=document.createElement('div');f.className='fire-fx';f.textContent='🔥';
+  card.appendChild(f);
+  setTimeout(()=>{if(f.parentNode)f.remove()},2000);
+  setTimeout(()=>{if(sc)sc.classList.remove('fire');card.classList.remove('firing')},2600);
+}
+/* 11台以上:從贏家名字射出隕石,砸向每位扣分者 */
+function triggerMeteor(winnerSeat,payerSeats){
+  const stage=document.getElementById('broadcast');if(!stage)return;
+  const src=cornerElForSeat(winnerSeat);if(!src){triggerFire(payerSeats);return;}
+  const stR=stage.getBoundingClientRect();
+  const sR=src.getBoundingClientRect();
+  const srcX=sR.left-stR.left+sR.width/2, srcY=sR.top-stR.top+sR.height*0.32;
+  (payerSeats||[]).forEach((seat,idx)=>{
+    const tgt=cornerElForSeat(seat);if(!tgt)return;
+    const tR=tgt.getBoundingClientRect();
+    const tgtX=tR.left-stR.left+tR.width/2, tgtY=tR.top-stR.top+tR.height/2;
+    const dx=tgtX-srcX, dy=tgtY-srcY;
+    const ang=Math.atan2(dy,dx)*180/Math.PI;
+    const delay=idx*160;
+    const m=document.createElement('div');m.className='meteor';
+    m.innerHTML='<div class="tail"></div><div class="ball"></div>';
+    m.style.left=srcX+'px';m.style.top=srcY+'px';
+    m.style.setProperty('--dx',dx+'px');m.style.setProperty('--dy',dy+'px');
+    m.style.setProperty('--ang',ang+'deg');
+    m.style.animationDelay=delay+'ms';
+    stage.appendChild(m);
+    setTimeout(()=>{if(m.parentNode)m.remove();impactCard(tgt);},delay+720);
+  });
+}
+function impactCard(card){
+  card.classList.add('firing');
+  const sc=card.querySelector('.sc');
+  if(sc){sc.classList.remove('fire');void sc.offsetWidth;sc.classList.add('fire');}
+  const boom=document.createElement('div');boom.className='impact-fx';boom.textContent='💥';
+  card.appendChild(boom);
+  setTimeout(()=>{if(boom.parentNode)boom.remove()},900);
+  setTimeout(()=>{if(sc)sc.classList.remove('fire');card.classList.remove('firing')},2600);
 }
 function flashOverlay(){document.querySelectorAll('.tile,.bc-corner').forEach(t=>{t.classList.remove('flash');void t.offsetWidth;t.classList.add('flash')})}
 
