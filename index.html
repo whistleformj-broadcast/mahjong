@@ -221,13 +221,13 @@ tr.penrow td.round{color:#C13B2E;font-weight:900}
   100%{opacity:0;transform:translate(-50%,-64px) scale(.8)}
 }
 /* 11台以上:隕石 */
-.meteor{position:absolute;width:16px;height:16px;z-index:30;pointer-events:none;
+.meteor{position:absolute;width:56px;height:56px;z-index:30;pointer-events:none;
   transform:translate(-50%,-50%) rotate(var(--ang));
   animation:meteorFly .72s cubic-bezier(.5,.05,.85,.35) forwards}
 .meteor .ball{position:absolute;inset:0;border-radius:50%;
   background:radial-gradient(circle at 35% 35%,#fff,#FFE08A 38%,#FF7A00 70%,#FF2D00);
-  box-shadow:0 0 12px 5px rgba(255,106,0,.9),0 0 26px 10px rgba(255,45,0,.5)}
-.meteor .tail{position:absolute;top:50%;right:100%;width:78px;height:7px;transform:translateY(-50%);
+  box-shadow:0 0 30px 12px rgba(255,106,0,.95),0 0 60px 24px rgba(255,45,0,.55)}
+.meteor .tail{position:absolute;top:50%;right:100%;width:230px;height:24px;transform:translateY(-50%);
   background:linear-gradient(90deg,transparent,rgba(255,80,0,.55),rgba(255,120,0,.9),#FFE08A);
   border-radius:5px;filter:blur(.5px)}
 @keyframes meteorFly{
@@ -236,7 +236,7 @@ tr.penrow td.round{color:#C13B2E;font-weight:900}
   100%{opacity:1;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) rotate(var(--ang)) scale(1)}
 }
 /* 撞擊爆炸 */
-.impact-fx{position:absolute;top:42%;left:50%;font-size:44px;z-index:31;pointer-events:none;
+.impact-fx{position:absolute;top:42%;left:50%;font-size:104px;z-index:31;pointer-events:none;
   animation:boom .8s ease-out forwards;filter:drop-shadow(0 0 12px #FF6A00)}
 @keyframes boom{
   0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}
@@ -268,7 +268,7 @@ body.greenscreen .ov-foot{display:none}
 <body>
 
 <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0720-1630・火焰隕石</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0720-1637・隕石加大</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
   <div class="tabs">
     <button id="tabControl" class="active" onclick="showView('control')">本場控制台</button>
