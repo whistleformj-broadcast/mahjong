@@ -23,7 +23,9 @@ body.ovview #overlayView{padding:0;min-height:100vh}
 body.ovview #broadcast{width:min(100vw, calc(100vh * 16 / 9));aspect-ratio:16 / 9;height:auto;min-height:0;margin:0 auto}
 body.ovview #cardsLayout{padding:24px;box-sizing:border-box}
 body.editpos #broadcast{outline:2px dashed rgba(216,169,78,.45);outline-offset:-2px}  /* 編輯時顯示 16:9 舞台邊界 */
-body.editpos .bc-corner.sel{outline:3px solid var(--gold)!important;box-shadow:0 0 0 4px rgba(216,169,78,.4);z-index:8}
+body.editpos .sel{outline:3px solid var(--gold)!important;box-shadow:0 0 0 4px rgba(216,169,78,.45);z-index:9}
+.snapbtn{background:rgba(216,169,78,.15);color:var(--gold);border:1px solid rgba(216,169,78,.5);border-radius:6px;padding:4px 8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.snapbtn:hover{background:rgba(216,169,78,.3)}
 .collapsible .collhead{cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between}
 .collapsible .caret{transition:transform .18s;font-size:14px;color:var(--gold)}
 .collapsible.collapsed .caret{transform:rotate(-90deg)}
@@ -423,18 +425,27 @@ body.greenscreen .ov-foot{display:none}
     <div class="bc-hint" id="bcHint"></div>
   </div>
   <div class="editpos-bar">
-    <span><b>編輯版面模式</b>・點小卡選取後用 X/Y 調位置;大小統一四家</span>
+    <span><b>編輯版面模式</b>・點任一元件(計分表/徽章/小卡)選取 → 用 X/Y 或「貼齊」按鈕定位</span>
     <div style="display:flex;align-items:center;gap:12px;font-size:12.5px;white-space:nowrap;flex-wrap:wrap">
       <label style="display:flex;align-items:center;gap:5px">四家大小
         <input type="range" id="cornerScale" min="0.6" max="2.5" step="0.05" value="1.25" style="width:88px" oninput="setCornerSizeAll(false)" onchange="setCornerSizeAll(true)">
         <span id="cornerScaleVal" style="min-width:38px;color:var(--gold);font-weight:700">125%</span></label>
       <span id="cornerSel" style="color:#8FD0FF;font-weight:700">未選取(點小卡)</span>
       <label style="display:flex;align-items:center;gap:5px">X軸
-        <input type="range" id="cornerX" min="0" max="92" step="0.5" value="4" style="width:90px" oninput="applySelectedXY(false)" onchange="applySelectedXY(true)">
+        <input type="range" id="cornerX" min="0" max="100" step="0.5" value="4" style="width:90px" oninput="applySelectedXY(false)" onchange="applySelectedXY(true)">
         <span id="cornerXVal" style="min-width:34px;color:var(--gold);font-weight:700">—</span></label>
       <label style="display:flex;align-items:center;gap:5px">Y軸
-        <input type="range" id="cornerY" min="0" max="92" step="0.5" value="4" style="width:90px" oninput="applySelectedXY(false)" onchange="applySelectedXY(true)">
+        <input type="range" id="cornerY" min="0" max="100" step="0.5" value="4" style="width:90px" oninput="applySelectedXY(false)" onchange="applySelectedXY(true)">
         <span id="cornerYVal" style="min-width:34px;color:var(--gold);font-weight:700">—</span></label>
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;border-left:1px solid rgba(216,169,78,.3);padding-left:10px">
+        <span style="color:#8FD0FF;font-weight:700">貼齊</span>
+        <button class="snapbtn" onclick="snapSel('left')">⇤左</button>
+        <button class="snapbtn" onclick="snapSel('hcenter')">↔水平中</button>
+        <button class="snapbtn" onclick="snapSel('right')">右⇥</button>
+        <button class="snapbtn" onclick="snapSel('top')">⤒上</button>
+        <button class="snapbtn" onclick="snapSel('vcenter')">↕垂直中</button>
+        <button class="snapbtn" onclick="snapSel('bottom')">⤓下</button>
+      </div>
     </div>
     <button class="btn btn-outline btn-sm" onclick="resetPositions()">回復預設</button>
     <button class="btn btn-gold btn-sm" onclick="toggleEditPos()">完成 ✓</button>
@@ -1245,11 +1256,14 @@ function setCornerSizeAll(doSave){
   if(doSave)savePos();
 }
 
-/* 點選一張小卡 → 之後 X/Y 只控制它 */
-function selectCorner(id){
-  if(!CORNER_IDS.includes(id))return;
+/* 可拖曳/可選取的元件名稱 */
+const EL_NAME={bcSummary:'計分表(左上)',bcTitle:'將數徽章(右上)',cornerN:'左上(北)',cornerW:'右上(西)',cornerE:'右下(南)',cornerS:'左下(東)'};
+
+/* 點選任一元件 → 之後 X/Y 與「貼齊」只控制它 */
+function selectEl(id){
+  if(!DRAG_IDS.includes(id))return;
   selectedCorner=id;
-  CORNER_IDS.forEach(c=>{const el=document.getElementById(c);if(el)el.classList.toggle('sel',c===id)});
+  DRAG_IDS.forEach(c=>{const el=document.getElementById(c);if(el)el.classList.toggle('sel',c===id)});
   const P=ovPos();const p=P[id]||{};
   if(p.xp==null){ // 尚未定位 → 由目前實際位置換算
     const stage=document.getElementById('broadcast').getBoundingClientRect();
@@ -1258,9 +1272,35 @@ function selectCorner(id){
     p.yp=+((r.top-stage.top)/stage.height*100).toFixed(3);
     P[id]=Object.assign(P[id]||{},p);
   }
-  const sel=document.getElementById('cornerSel');if(sel)sel.textContent='已選:'+CORNER_NAME[id];
+  const sel=document.getElementById('cornerSel');if(sel)sel.textContent='已選:'+(EL_NAME[id]||id);
   const x=document.getElementById('cornerX'),y=document.getElementById('cornerY');
   if(x)x.value=p.xp; if(y)y.value=p.yp;
+  document.getElementById('cornerXVal').textContent=Math.round(p.xp)+'%';
+  document.getElementById('cornerYVal').textContent=Math.round(p.yp)+'%';
+}
+function selectCorner(id){selectEl(id)} // 相容舊呼叫
+
+/* 貼齊:把選取的元件對齊 16:9 框的邊 / 置中(自動依元件大小計算)*/
+function snapSel(where){
+  if(!selectedCorner){toast('請先點一個元件(計分表/徽章/小卡)');return;}
+  const stage=document.getElementById('broadcast').getBoundingClientRect();
+  const r=document.getElementById(selectedCorner).getBoundingClientRect();
+  const wpct=r.width/stage.width*100, hpct=r.height/stage.height*100;
+  const P=ovPos();const cur=P[selectedCorner]||{};
+  const p=Object.assign({},cur);
+  // 先確保兩軸都有值(未定位過的元件)
+  if(p.xp==null)p.xp=+((r.left-stage.left)/stage.width*100).toFixed(3);
+  if(p.yp==null)p.yp=+((r.top-stage.top)/stage.height*100).toFixed(3);
+  if(where==='left')p.xp=0;
+  else if(where==='right')p.xp=Math.max(0,+(100-wpct).toFixed(3));
+  else if(where==='hcenter')p.xp=Math.max(0,+((100-wpct)/2).toFixed(3));
+  else if(where==='top')p.yp=0;
+  else if(where==='bottom')p.yp=Math.max(0,+(100-hpct).toFixed(3));
+  else if(where==='vcenter')p.yp=Math.max(0,+((100-hpct)/2).toFixed(3));
+  P[selectedCorner]=Object.assign(P[selectedCorner]||{},p);
+  applyPositions();savePos();
+  document.getElementById('cornerX').value=p.xp;
+  document.getElementById('cornerY').value=p.yp;
   document.getElementById('cornerXVal').textContent=Math.round(p.xp)+'%';
   document.getElementById('cornerYVal').textContent=Math.round(p.yp)+'%';
 }
@@ -1289,7 +1329,7 @@ function toggleEditPos(){
     const P=ovPos();
     const anySet=CORNER_IDS.some(id=>P[id]&&(P[id].xp!=null||P[id].scale));
     selectedCorner=null;
-    CORNER_IDS.forEach(c=>{const el=document.getElementById(c);if(el)el.classList.remove('sel')});
+    DRAG_IDS.forEach(c=>{const el=document.getElementById(c);if(el)el.classList.remove('sel')});
     const sc=(P.cornerS&&P.cornerS.scale)||1.25;
     const ss=document.getElementById('cornerScale');if(ss)ss.value=sc;
     document.getElementById('cornerScaleVal').textContent=Math.round(sc*100)+'%';
@@ -1310,7 +1350,7 @@ async function resetPositions(){
 function startDrag(e){
   if(!editPos)return;
   const el=e.currentTarget;
-  if(['cornerN','cornerW','cornerE','cornerS'].includes(el.id))selectCorner(el.id);
+  selectEl(el.id);
   e.preventDefault();
   const parent=document.getElementById('broadcast').getBoundingClientRect();
   const rect=el.getBoundingClientRect();
