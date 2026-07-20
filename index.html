@@ -268,7 +268,7 @@ body.greenscreen .ov-foot{display:none}
 <body>
 
 <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0720-1637・隕石加大</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0720-1652・座位刪上把</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
   <div class="tabs">
     <button id="tabControl" class="active" onclick="showView('control')">本場控制台</button>
@@ -337,6 +337,7 @@ body.greenscreen .ov-foot{display:none}
       <div class="btnrow">
         <button class="btn btn-gold" onclick="confirmReseat()">✓ 開始這一將</button>
         <button class="btn btn-outline" onclick="fillReseatKeep()">維持原班原位</button>
+        <button class="btn btn-outline" onclick="undoFromReseat()">↩ 刪除上一把(回上一將修正)</button>
         <button class="btn btn-red" onclick="endSession()">結束本場並歸檔 ■</button>
       </div>
     </div>
@@ -1097,6 +1098,21 @@ function undoHand(){
     return;
   }
   s.hands.pop();save();updateForm();
+}
+
+/* 一將打完、在「設定座位」階段刪除剛才那一把(例如北風北按錯),回到上一把重新輸入 */
+async function undoFromReseat(){
+  const s=curSession();if(!s)return;
+  if(!s.hands||!s.hands.length){toast('目前沒有可刪除的牌');return;}
+  const ok=await uiConfirm('刪除這一將的最後一把、回到上一把重新輸入?','刪除','取消');
+  if(!ok)return;
+  s.hands.pop();
+  const after=replay(s);
+  const maxJ=Math.floor(after.passes/16)+1;
+  s.seatings=(s.seatings||[]).filter(x=>(x.jiang||1)<=maxJ); // 清掉已不存在之將的座位表(保險)
+  cur={winner:null,type:null,gun:null};
+  save();
+  toast('已刪除上一把,回到上一把重新輸入');
 }
 
 /* ── 一炮三響 / 炸糊 ── */
