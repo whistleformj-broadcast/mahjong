@@ -87,8 +87,8 @@ td.round{white-space:nowrap;color:rgba(246,241,227,.75)}
 body.greenscreen #broadcast{min-height:88vh}
 .bc-summary{position:absolute;top:0;left:0;background:rgba(9,20,15,.82);border:1px solid rgba(216,169,78,.5);border-radius:8px;overflow:hidden;backdrop-filter:blur(2px)}
 body.greenscreen .bc-summary{background:rgba(9,20,15,.94)}
-.bc-summary table{width:auto;border-collapse:collapse;font-size:15px}
-.bc-summary th{background:rgba(216,169,78,.9);color:#22201A;font-weight:900;padding:5px 12px;font-size:13px;letter-spacing:1px;text-align:center;border:none}
+.bc-summary table{width:auto;border-collapse:collapse;font-size:calc(15px*var(--sumf,1))}
+.bc-summary th{background:rgba(216,169,78,.9);color:#22201A;font-weight:900;padding:5px 12px;font-size:calc(13px*var(--sumf,1));letter-spacing:1px;text-align:center;border:none}
 .bc-summary td{padding:5px 12px;text-align:center;font-weight:700;border-bottom:1px solid rgba(246,241,227,.1);font-variant-numeric:tabular-nums;color:var(--ivory)}
 .bc-summary td.nm{text-align:left;font-weight:900;color:#fff}
 .bc-summary tr:last-child td{border-bottom:none}
@@ -104,13 +104,13 @@ body.greenscreen .bc-summary{background:rgba(9,20,15,.94)}
 body.greenscreen .bc-corner{background:rgba(9,20,15,.95)}
 .bc-corner.dealer{border:2px solid var(--gold);box-shadow:0 0 16px rgba(216,169,78,.5)}
 .bc-corner .top{display:flex;align-items:stretch}
-.bc-corner .rk{background:rgba(0,0,0,.4);color:var(--ivory);padding:6px 10px;text-align:center;font-size:11px;font-weight:700;line-height:1.1;display:flex;flex-direction:column;justify-content:center}
-.bc-corner .rk b{font-size:20px;color:#fff;font-weight:900}
-.bc-corner .nm{flex:1;display:flex;align-items:center;padding:6px 12px;font-size:20px;font-weight:900;color:#fff;letter-spacing:1px}
-.bc-corner .dz{background:var(--red);color:#fff;font-size:11px;font-weight:900;padding:2px 7px;border-radius:4px;margin-left:8px}
+.bc-corner .rk{background:rgba(0,0,0,.4);color:var(--ivory);padding:6px 10px;text-align:center;font-size:calc(11px*var(--cardf,1));font-weight:700;line-height:1.1;display:flex;flex-direction:column;justify-content:center}
+.bc-corner .rk b{font-size:calc(20px*var(--cardf,1));color:#fff;font-weight:900}
+.bc-corner .nm{flex:1;display:flex;align-items:center;padding:6px 12px;font-size:calc(20px*var(--cardf,1));font-weight:900;color:#fff;letter-spacing:1px}
+.bc-corner .dz{background:var(--red);color:#fff;font-size:calc(11px*var(--cardf,1));font-weight:900;padding:2px 7px;border-radius:4px;margin-left:8px}
 .bc-corner .bot{display:flex;align-items:center;gap:8px;padding:6px 12px;border-top:1px solid rgba(246,241,227,.15)}
-.bc-corner .wind{background:var(--red);color:#fff;font-size:18px;font-weight:900;width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.bc-corner .sc{font-size:26px;font-weight:900;font-variant-numeric:tabular-nums}
+.bc-corner .wind{background:var(--red);color:#fff;font-size:calc(18px*var(--cardf,1));font-weight:900;width:calc(30px*var(--cardf,1));height:calc(30px*var(--cardf,1));border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.bc-corner .sc{font-size:calc(26px*var(--cardf,1));font-weight:900;font-variant-numeric:tabular-nums}
 .bc-corner .sc.p{color:#7FD9AC}.bc-corner .sc.n{color:#E8837A}
 .bc-corner.flash{animation:pop .6s ease}
 .c-north{top:64px;left:0}
@@ -224,7 +224,7 @@ body.greenscreen .ov-foot{display:none}
 <body>
 
 <div class="topbar">
-  <h1>🀄 麻將直播記分板</h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0720-1535・手動台數</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
   <div class="tabs">
     <button id="tabControl" class="active" onclick="showView('control')">本場控制台</button>
@@ -309,8 +309,11 @@ body.greenscreen .ov-foot{display:none}
       </div>
       <div class="steplabel" id="gunLabel" style="display:none"><b>3</b>・誰放槍?</div>
       <div class="choice" id="gunChoice" style="display:none"></div>
-      <div class="steplabel" id="taiLabel"><b>3</b>・牌面幾台?(含自摸台,莊家台與連莊台系統自動加)</div>
+      <div class="steplabel" id="taiLabel"><b>3</b>・幾台?(直接輸入總台數,含莊台/連莊台)</div>
       <div class="grid4" id="taiRow"><div><input id="tai" type="number" value="1" min="0"></div></div>
+      <div style="margin:8px 0 2px;font-size:13px">
+        <span id="taiHint" style="color:var(--gold);font-weight:700"></span>
+      </div>
       <div class="preview" id="preview">請選擇胡牌玩家</div>
       <div class="btnrow">
         <button class="btn btn-gold" id="confirmBtn" onclick="confirmHand()" disabled>確認記錄 ✓</button>
@@ -446,6 +449,14 @@ body.greenscreen .ov-foot{display:none}
         <button class="snapbtn" onclick="snapSel('vcenter')">↕垂直中</button>
         <button class="snapbtn" onclick="snapSel('bottom')">⤓下</button>
       </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-left:1px solid rgba(216,169,78,.3);padding-left:10px">
+        <label style="display:flex;align-items:center;gap:5px">計分表字
+          <input type="range" id="sumFont" min="0.6" max="2.2" step="0.05" value="1" style="width:88px" oninput="setSumFont(false)" onchange="setSumFont(true)">
+          <span id="sumFontVal" style="min-width:38px;color:var(--gold);font-weight:700">100%</span></label>
+        <label style="display:flex;align-items:center;gap:5px">小卡字
+          <input type="range" id="cardFont" min="0.6" max="2.2" step="0.05" value="1" style="width:88px" oninput="setCardFont(false)" onchange="setCardFont(true)">
+          <span id="cardFontVal" style="min-width:38px;color:var(--gold);font-weight:700">100%</span></label>
+      </div>
     </div>
     <button class="btn btn-outline btn-sm" onclick="resetPositions()">回復預設</button>
     <button class="btn btn-gold btn-sm" onclick="toggleEditPos()">完成 ✓</button>
@@ -551,6 +562,8 @@ function toast(msg){
 }
 function normalize(d){
   d=d||{};
+  d.fontSummary=+d.fontSummary||1;   // 計分表字級
+  d.fontCards=+d.fontCards||1;       // 小卡字級
   d.roster=Array.isArray(d.roster)?d.roster:Object.values(d.roster||{});
   d.sessions=Array.isArray(d.sessions)?d.sessions:Object.values(d.sessions||{});
   d.sessions.forEach(s=>{
@@ -743,7 +756,7 @@ function playerTotals(s){
   s.hands.forEach((h,idx)=>{
     if(h.type==='draw')return;
     const st=r.states[idx];
-    const bonus=dealerBonus(st.streak);
+    const bonus=h.noBonus?0:dealerBonus(st.streak);
     const pay=(tai)=>s.base+tai*s.perTai;
     const seatsNow=seatingForJiang(s,Math.floor(st.passes/16)+1);
     const occ=seat=>ensure(seatsNow[seat]);
@@ -969,6 +982,12 @@ function updateForm(){
   const r=replay(s);
   const bonus=dealerBonus(r.streak);
   const bonusTxt='莊1台'+(r.streak>0?'+連'+r.streak+'拉'+r.streak+'('+(2*r.streak)+'台)':'');
+  // 直接輸入總台數:提示目前莊家連莊台作為參考(不自動加)
+  const dlrName=nameOf(currentOccupant(s,r.dealer));
+  const hintEl=document.getElementById('taiHint');
+  if(hintEl)hintEl.textContent='莊家 '+dlrName+'('+(r.streak>0?'連'+r.streak:'首莊')+') ・ 連莊台參考 '+bonus+'台(自行決定是否加入)';
+  const tl=document.getElementById('taiLabel');
+  if(tl)tl.innerHTML='<b>3</b>・幾台?(直接輸入總台數,含莊台/連莊台)';
   document.querySelectorAll('#typeChoice button').forEach(b=>b.classList.toggle('sel',b.dataset.t===cur.type));
   const isRon=cur.type==='ron',isDraw=cur.type==='draw';
   document.getElementById('gunLabel').style.display=isRon?'':'none';
@@ -1007,7 +1026,7 @@ document.getElementById('newPlayerName').addEventListener('keydown',e=>{if(e.key
 function confirmHand(){
   const s=curSession();if(!s)return;
   const tai=+document.getElementById('tai').value||0;
-  s.hands.push(cur.type==='draw'?{type:'draw'}:{winner:cur.winner,type:cur.type,gun:cur.gun,tai});
+  s.hands.push(cur.type==='draw'?{type:'draw'}:{winner:cur.winner,type:cur.type,gun:cur.gun,tai,noBonus:true});
   cur={winner:null,type:null,gun:null};
   document.getElementById('tai').value=1;
   save();updateForm();flashOverlay();
@@ -1050,7 +1069,7 @@ function recordMultiRon(){
   const seats=wins.map(w=>w.seat);
   if(seats.includes(gunSeat)){toast('放槍者不能同時是胡牌者');return;}
   if(new Set(seats).size!==seats.length){toast('胡牌者不可重複');return;}
-  s.hands.push({type:'multiron',gun:gunSeat,wins});
+  s.hands.push({type:'multiron',gun:gunSeat,wins,noBonus:true});
   // 清空欄位
   ['mrW0','mrW1','mrW2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   ['mrT0','mrT1','mrT2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=0;});
@@ -1208,6 +1227,7 @@ function ovPos(){db.overlayPos=db.overlayPos||{};return db.overlayPos}
 function savePos(){save();}  // 寫進雲端 + 本機,OBS 端會自動套用同一組位置
 
 function applyPositions(){
+  applyFontVars();
   const P=ovPos();
   DRAG_IDS.forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
@@ -1280,6 +1300,24 @@ function selectEl(id){
 }
 function selectCorner(id){selectEl(id)} // 相容舊呼叫
 
+/* 字級:計分表 / 小卡(以 CSS 變數乘上原字級,存於 db 並同步雲端)*/
+function applyFontVars(){
+  const bc=document.getElementById('broadcast');
+  if(bc){bc.style.setProperty('--sumf',db.fontSummary||1);bc.style.setProperty('--cardf',db.fontCards||1);}
+}
+function setSumFont(doSave){
+  const v=+document.getElementById('sumFont').value||1;
+  db.fontSummary=v;applyFontVars();
+  document.getElementById('sumFontVal').textContent=Math.round(v*100)+'%';
+  if(doSave)save();
+}
+function setCardFont(doSave){
+  const v=+document.getElementById('cardFont').value||1;
+  db.fontCards=v;applyFontVars();
+  document.getElementById('cardFontVal').textContent=Math.round(v*100)+'%';
+  if(doSave)save();
+}
+
 /* 貼齊:把選取的元件對齊 16:9 框的邊 / 置中(自動依元件大小計算)*/
 function snapSel(where){
   if(!selectedCorner){toast('請先點一個元件(計分表/徽章/小卡)');return;}
@@ -1337,6 +1375,9 @@ function toggleEditPos(){
     document.getElementById('cornerXVal').textContent='—';
     document.getElementById('cornerYVal').textContent='—';
     if(!anySet){if(ss)ss.value=1.25;initCornerLayout(true);}   // 起始:四家 125% 對稱排列
+    const sf=document.getElementById('sumFont'),cf=document.getElementById('cardFont');
+    if(sf){sf.value=db.fontSummary||1;document.getElementById('sumFontVal').textContent=Math.round((db.fontSummary||1)*100)+'%';}
+    if(cf){cf.value=db.fontCards||1;document.getElementById('cardFontVal').textContent=Math.round((db.fontCards||1)*100)+'%';}
   }
   document.getElementById('editPosBtn').classList.toggle('btn-gold',editPos);
   document.getElementById('editPosBtn').classList.toggle('btn-outline',!editPos);
