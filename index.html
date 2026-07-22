@@ -284,7 +284,7 @@ body.greenscreen .ov-foot{display:none}
 <div id="staleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#C0392B;color:#fff;text-align:center;padding:9px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⚠️ 這個畫面的版本過舊,分數可能不正確 — 請清除快取並重新整理(電腦 Ctrl+Shift+R、OBS 右鍵來源→重新整理快取)</div>
 
 <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0722-1439・b9分數浮動</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0722-1450・b10小卡修復</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
   <div class="tabs">
     <button id="tabControl" class="active" onclick="showView('control')">本場控制台</button>
@@ -1039,7 +1039,6 @@ function renderChoices(){
   const r=replay(s);
   const w=document.getElementById('winnerChoice'),g=document.getElementById('gunChoice');
   w.innerHTML='';g.innerHTML='';
-  const _deltas=[];
   s.seats.forEach((_,i)=>{
     const pid=currentOccupant(s,i);
     const tag=i===r.dealer?'<span class="dz">莊'+(r.streak>0?'・連'+r.streak:'')+'</span>':'';
@@ -1679,6 +1678,7 @@ function renderBroadcast(){
   const lifeScore={};lifetimeStats().forEach(p=>lifeScore[p.id]=p.score); // 當季累積分數
   // 不再預先清空四張小卡:下面的迴圈本來就會把每張卡的內容整段覆寫,
   // 先清空再填回會讓卡片瞬間塌縮到 min-width 再彈回,造成「先變小再變回」的視覺跳動。
+  const _deltas=[];
   s.seats.forEach((_,i)=>{
     const pid=currentOccupant(s,i);
     const el=document.getElementById(seatToCorner[i]);
@@ -1790,7 +1790,7 @@ function renderOverlay(){
     pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=9;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=10;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
