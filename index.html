@@ -108,7 +108,7 @@ body.greenscreen .bc-summary{background:rgba(9,20,15,.94)}
 .bc-title .jn small{font-size:14px;color:var(--ivory)}
 .bc-title .rd{font-size:13px;color:rgba(246,241,227,.85);margin-top:4px;letter-spacing:1px}
 
-.bc-corner{position:absolute;min-width:150px;background:rgba(9,20,15,.85);border-radius:10px;overflow:hidden;border:1px solid rgba(246,241,227,.25)}
+.bc-corner{position:absolute;min-width:150px;min-height:calc(64px*var(--cardf,1));background:rgba(9,20,15,.85);border-radius:10px;overflow:hidden;border:1px solid rgba(246,241,227,.25)}
 body.greenscreen .bc-corner{background:rgba(9,20,15,.95)}
 .bc-corner.dealer{border:2px solid var(--gold);box-shadow:0 0 16px rgba(216,169,78,.5)}
 .bc-corner .top{display:flex;align-items:stretch}
@@ -145,6 +145,8 @@ body.slideshow #ssAmbient{display:block;position:absolute;inset:-20%;z-index:0;p
 body.greenscreen #ssAmbient{display:none!important}
 #cardsLayout .ov-head,#cardsLayout .tiles,#cardsLayout .ov-foot{position:relative;z-index:1}
 /* 淡入切換 */
+/* 中間休息輪播:灰色網底遮住直播畫面,字卡疊在上面 */
+body.slideshow #cardsLayout{background:linear-gradient(to top,rgba(18,22,20,.96) 0%,rgba(18,22,20,.93) 70%,rgba(18,22,20,.86) 100%)}
 body.slideshow #cardsLayout .tiles{animation:slideIn .7s ease}
 body.slideshow #cardsLayout .ov-head{animation:slideIn .7s ease}
 @keyframes slideIn{0%{opacity:0;transform:translateY(14px)}100%{opacity:1;transform:translateY(0)}}
@@ -183,22 +185,22 @@ body.greenscreen .ss-pill{display:none!important}
 body.greenscreen .ov-head .title{text-shadow:0 2px 0 #043}
 body.greenscreen .ov-head .sub{color:#043;font-weight:900}
 
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;max-width:1100px;margin:0 auto}
-.tile{background:var(--ivory);border-radius:14px;padding:16px 14px 12px;color:var(--ink);position:relative;box-shadow:0 6px 0 var(--ivory-side),0 10px 18px rgba(0,0,0,.35);border:1px solid #fff}
-.tile .rank{position:absolute;top:-10px;left:12px;background:var(--jade);color:#fff;font-size:12px;font-weight:900;padding:3px 10px;border-radius:20px;letter-spacing:1px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;max-width:1240px;margin:0 auto}
+.tile{background:var(--ivory);border-radius:16px;padding:22px 18px 18px;color:var(--ink);position:relative;box-shadow:0 6px 0 var(--ivory-side),0 10px 18px rgba(0,0,0,.35);border:1px solid #fff}
+.tile .rank{position:absolute;top:-12px;left:12px;background:var(--jade);color:#fff;font-size:16px;font-weight:900;padding:4px 13px;border-radius:20px;letter-spacing:1px}
 .tile.leader .rank{background:var(--red)}
 .tile.leader{outline:3px solid var(--gold);outline-offset:2px}
-.tile .dealer{position:absolute;top:-10px;right:12px;background:var(--red);color:#fff;font-size:12px;font-weight:900;padding:3px 10px;border-radius:20px;letter-spacing:1px}
-.tile .pname{font-size:17px;font-weight:900;margin-bottom:2px;letter-spacing:1px}
-.tile .seatwind{font-size:11px;color:#8A8264;font-weight:700;margin-bottom:2px}
-.tile .score{font-size:38px;font-weight:900;line-height:1.15;font-variant-numeric:tabular-nums}
+.tile .dealer{position:absolute;top:-12px;right:12px;background:var(--red);color:#fff;font-size:16px;font-weight:900;padding:4px 13px;border-radius:20px;letter-spacing:1px}
+.tile .pname{font-size:28px;font-weight:900;margin-bottom:3px;letter-spacing:1px}
+.tile .seatwind{font-size:16px;color:#8A8264;font-weight:700;margin-bottom:3px}
+.tile .score{font-size:50px;font-weight:900;line-height:1.12;font-variant-numeric:tabular-nums}
 .tile .score.neg{color:var(--red)}
 .tile .score.pos{color:var(--jade)}
 .tile .stats{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
-.tile .stats span{font-size:12px;font-weight:700;padding:3px 8px;border-radius:5px;background:#EEE7D2;color:#5A5442}
+.tile .stats span{font-size:16px;font-weight:700;padding:4px 11px;border-radius:6px;background:#EEE7D2;color:#5A5442}
 .tile .stats .s-zimo{background:#DCEEE3;color:#1E5C41}
 .tile .stats .s-gun{background:#F6DBD7;color:#8C2A20}
-.tile .life{margin-top:10px;padding-top:8px;border-top:1px dashed #D8CEB2;font-size:12px;color:#6B6551;display:flex;justify-content:space-between}
+.tile .life{margin-top:12px;padding-top:10px;border-top:1px dashed #D8CEB2;font-size:16px;color:#6B6551;display:flex;justify-content:space-between}
 .tile .life b{color:#22201A}
 tr.penrow{background:rgba(193,59,46,.12)}
 tr.penrow td{color:#E8A0A0}
@@ -261,7 +263,7 @@ body.greenscreen .ov-foot{display:none}
 .roster{display:flex;gap:8px;flex-wrap:wrap}
 .chip{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.25);border:1px solid rgba(246,241,227,.25);border-radius:20px;padding:6px 6px 6px 14px;font-size:14px}
 .chip button{background:none;border:none;color:#E8837A;cursor:pointer;font-size:15px;font-weight:900;padding:0 6px}
-@media (max-width:640px){.tile .score{font-size:30px}}
+@media (max-width:640px){.tile .score{font-size:50px}}
 /* ── 畫面內確認視窗 & 提示 ── */
 #uiModal{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center}
 .uim-back{position:absolute;inset:0;background:rgba(0,0,0,.6)}
@@ -277,7 +279,7 @@ body.greenscreen .ov-foot{display:none}
 <div id="staleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#C0392B;color:#fff;text-align:center;padding:9px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⚠️ 這個畫面的版本過舊,分數可能不正確 — 請清除快取並重新整理(電腦 Ctrl+Shift+R、OBS 右鍵來源→重新整理快取)</div>
 
 <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0721-1451・b3計分表大小</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0722-0740・b7網底大卡分頁</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
   <div class="tabs">
     <button id="tabControl" class="active" onclick="showView('control')">本場控制台</button>
@@ -590,6 +592,7 @@ let db={roster:[],sessions:[],currentId:null};
 let cur={winner:null,type:null,gun:null};
 let ovMode='today';
 let ovLayout='broadcast';
+let ovPage=0;              // 總累積榜目前頁(每頁10人)
 let slideshow=false;      // 自動輪播開關
 let slideTimer=null;      // 輪播計時器
 let slideSeq=[];          // 目前輪播序列
@@ -870,19 +873,20 @@ function sessionTotals(s){
 }
 function handWinAmount(s,h,st){
   if(h.type==='draw')return 0;
-  const bonus=dealerBonus(st.streak);
+  const bonus=h.noBonus?0:dealerBonus(st.streak);
   const pay=(tai)=>s.base+tai*s.perTai;
   if(h.type==='zimo'){
     let sum=0;
     s.seats.forEach((_,i)=>{
       if(i===h.winner)return;
-      const withBonus=(h.winner===st.dealer)||(i===st.dealer);
-      sum+=pay(h.tai+(withBonus?bonus:0));
+      // 莊台:僅當贏家非莊、且這位付錢的人是莊 → 自動加(與 playerTotals 一致)
+      const addBonus=(h.winner!==st.dealer)&&(i===st.dealer);
+      sum+=pay(h.tai+(addBonus?bonus:0));
     });
     return sum;
   }
-  const withBonus=(h.winner===st.dealer)||(h.gun===st.dealer);
-  return pay(h.tai+(withBonus?bonus:0));
+  // 胡牌一律直接輸入總台數(含莊台),不自動加(與 playerTotals 一致)
+  return pay(h.tai);
 }
 function lifetimeStats(){
   const m={};
@@ -1265,11 +1269,10 @@ function render(){
       const {h,idx}=ev;
       const st=replay(s).states[idx];
       if(h.type==='multiron'){
-        const bonus=dealerBonus(st.streak);
         let total=0;
         const parts=(h.wins||[]).map(w=>{
-          const wb=(w.seat===st.dealer)||(h.gun===st.dealer);
-          const amt=s.base+((w.tai||0)+(wb?bonus:0))*s.perTai; // 顯示用(與 pay 一致)
+          // 一炮多響:各家直接輸入總台數,不自動加莊台(與 playerTotals 完全一致)
+          const amt=s.base+(w.tai||0)*s.perTai;
           total+=amt;
           return nameOf(occupantAt(s,w.seat,idx))+' '+(w.tai||0)+'台';
         });
@@ -1278,9 +1281,9 @@ function render(){
       }
       if(h.type==='draw'){tr.innerHTML=`<td class="round">${roundLabel(st)}</td><td>${nameOf(occupantAt(s,st.dealer,idx))}</td><td colspan="5" style="color:var(--muted)">流局・莊家連莊</td>`}
       else{
-        const bonus=(h.winner===st.dealer||h.type==='ron'&&h.gun===st.dealer||h.type==='zimo')?dealerBonus(st.streak):0;
-        const totalTai=h.tai+((h.winner===st.dealer||(h.type==='ron'&&h.gun===st.dealer))?dealerBonus(st.streak):0);
-        const taiTxt=h.type==='zimo'&&h.winner!==st.dealer?`${h.tai}(莊付+${dealerBonus(st.streak)})`:`${totalTai}${totalTai!==h.tai?'(含莊'+dealerBonus(st.streak)+')':''}`;
+        // 只有「非莊家自摸」時,莊家那份才是系統自動加成(見 playerTotals);
+        // 其餘情況(莊家自摸、一般胡牌)玩家輸入的就是總台數,不再額外加莊台,避免顯示與實際分數對不上。
+        const taiTxt=h.type==='zimo'&&h.winner!==st.dealer?`${h.tai}(莊付+${dealerBonus(st.streak)})`:`${h.tai}`;
         tr.innerHTML=`<td class="round">${roundLabel(st)}</td><td>${nameOf(occupantAt(s,st.dealer,idx))}</td><td class="win">${nameOf(occupantAt(s,h.winner,idx))}${h.winner===st.dealer?' 🀄':''}</td><td>${h.type==='zimo'?'自摸':'胡牌'}</td><td>${taiTxt}</td><td class="gun">${h.type==='ron'?nameOf(occupantAt(s,h.gun,idx)):'—'}</td><td>+${handWinAmount(s,h,st).toLocaleString()}</td>`;
       }
       tb.appendChild(tr);
@@ -1333,7 +1336,8 @@ function applyPositions(){
       el.style.left='';el.style.top='';el.style.right='';el.style.bottom='';
     }
     if(p.scale&&p.scale!==1){el.style.transformOrigin='top left';el.style.transform='scale('+p.scale+')';}
-    else{el.style.transform='';}
+    else if(p.scale===1){el.style.transform='';}
+    // p.scale 讀不到時保留現有 transform,避免某次重繪把已放大的卡瞬間縮回(閃爍主因)
   });
 }
 
@@ -1395,9 +1399,15 @@ function selectEl(id){
 function selectCorner(id){selectEl(id)} // 相容舊呼叫
 
 /* 字級:計分表 / 小卡(以 CSS 變數乘上原字級,存於 db 並同步雲端)*/
+let _lastCardf=1,_lastSumf=1;
 function applyFontVars(){
   const bc=document.getElementById('broadcast');
-  if(bc){bc.style.setProperty('--sumf',db.fontSummary||1);bc.style.setProperty('--cardf',db.fontCards||1);}
+  if(!bc)return;
+  // 只在有效正數時更新;若某次讀到 0/NaN 就沿用上次值,避免字級瞬間縮小造成整卡閃爍
+  let cf=+db.fontCards; if(cf>0)_lastCardf=cf; else cf=_lastCardf;
+  let sf=+db.fontSummary; if(sf>0)_lastSumf=sf; else sf=_lastSumf;
+  bc.style.setProperty('--cardf',cf);
+  bc.style.setProperty('--sumf',sf);
 }
 function setSumFont(doSave){
   const v=+document.getElementById('sumFont').value||1;
@@ -1470,6 +1480,7 @@ function restoreLayout(snap){
   db.overlayPos=JSON.parse(JSON.stringify(snap.overlayPos||{}));
   db.fontSummary=snap.fontSummary||1;
   db.fontCards=snap.fontCards||1;
+  DRAG_IDS.forEach(id=>{const el=document.getElementById(id);if(el)el.style.transform='';});
   applyPositions();save();
   return true;
 }
@@ -1527,7 +1538,7 @@ function toggleEditPos(){
 }
 async function resetPositions(){
   if(!await uiConfirm('把所有表格與小卡位置回復成預設四角?','回復預設','取消'))return;
-  db.overlayPos={};save();applyPositions();
+  db.overlayPos={};DRAG_IDS.forEach(id=>{const el=document.getElementById(id);if(el){el.style.transform='';el.style.left='';el.style.top='';el.style.right='';el.style.bottom='';}});save();applyPositions();
   toast('位置已回復預設');
 }
 
@@ -1646,7 +1657,8 @@ function renderBroadcast(){
   // ── 四角座位小卡 ──
   const lrank=lifetimeRankMap();   // RANK 以歷史總累積排行為準
   const lifeScore={};lifetimeStats().forEach(p=>lifeScore[p.id]=p.score); // 當季累積分數
-  ['cornerN','cornerW','cornerE','cornerS'].forEach(id=>document.getElementById(id).innerHTML='');
+  // 不再預先清空四張小卡:下面的迴圈本來就會把每張卡的內容整段覆寫,
+  // 先清空再填回會讓卡片瞬間塌縮到 min-width 再彈回,造成「先變小再變回」的視覺跳動。
   s.seats.forEach((_,i)=>{
     const pid=currentOccupant(s,i);
     const el=document.getElementById(seatToCorner[i]);
@@ -1733,16 +1745,16 @@ function renderOverlay(){
     };
     const head='<thead><tr><th>排名</th><th>玩家</th><th>總分</th><th>胡牌</th><th>自摸</th><th>放槍</th><th>被摸</th><th>將數</th></tr></thead>';
     const tbl=(rows,start)=>`<table class="lb-table">${head}<tbody>${rows.map((p,i)=>rowHtml(p,start+i)).join('')}</tbody></table>`;
+    const per=10;
+    const totalPages=Math.max(1,Math.ceil(lb.length/per));
+    let page=ovPage||0; if(page>=totalPages)page=0;
+    const rows=lb.slice(page*per,page*per+per);
     if(!lb.length){
       tiles.innerHTML='<div style="grid-column:1/-1;text-align:center;color:rgba(246,241,227,.5)">尚無資料,開一場牌局後這裡會顯示排行</div>';
     }else{
-      const left=lb.slice(0,10), right=lb.slice(10);
-      const inner=right.length
-        ? `<div class="lb-col">${tbl(left,1)}</div><div class="lb-col">${tbl(right,11)}</div>`
-        : `<div class="lb-col" style="max-width:820px;margin:0 auto">${tbl(left,1)}</div>`;
-      tiles.innerHTML=`<div class="lb-wrap">${inner}</div>`;
+      tiles.innerHTML=`<div class="lb-wrap"><div class="lb-col" style="max-width:960px;margin:0 auto">${tbl(rows,page*per+1)}</div></div>`;
     }
-    document.getElementById('ovTitle').textContent='🏆 本季積分榜';
+    document.getElementById('ovTitle').textContent='🏆 本季積分榜'+(totalPages>1?` · 第 ${page+1}/${totalPages} 頁`:'');
     const totalJiangs=db.sessions.reduce((a,ss)=>{const rr=replay(ss);const js=new Set();rr.states.forEach(st=>js.add(Math.floor(st.passes/16)+1));return a+js.size;},0);
     document.getElementById('ovRound').textContent='總分 & 每將平均數據・共 '+totalJiangs+' 將'+(cs?'(紅=今日上升 / 綠=今日下降)':'');
   }
@@ -1750,10 +1762,10 @@ function renderOverlay(){
   const pill=document.getElementById('ssPill');
   if(pill&&slideshow&&slideSeq.length>1){
     const nx=slideSeq[(slideIdx+1)%slideSeq.length];
-    pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':'總累積排行');
+    pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=3;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=7;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
@@ -1858,16 +1870,20 @@ function awaitingSeating(s){
   return !seatingList(s).some(x=>(x.jiang||1)===curJ); // 第1將開局已指定
 }
 function buildSlideSeq(){
-  // 選位子階段(slideshowAuto):固定輪播「今日大卡 → 總累積榜」兩張
-  if(slideshowAuto){
-    return [{layout:'cards',mode:'today'},{layout:'cards',mode:'lifetime'}];
-  }
-  // 手動輪播:有牌局則今日+總累積,否則只總累積
+  // 總累積榜:每 10 人一張,人數變多會自動增加頁數(無限翻頁)
+  const per=10;
+  const lbCount=lifetimeLeaderboard().length;
+  const pages=Math.max(1,Math.ceil(lbCount/per));
+  const life=[];for(let k=0;k<pages;k++)life.push({layout:'cards',mode:'lifetime',page:k});
   const s=curSession();
+  // 選位子階段(開播前):今日大卡 → 總累積榜各頁
+  if(slideshowAuto){
+    return s?[{layout:'cards',mode:'today'},...life]:life;
+  }
+  // 手動輪播:有牌局則今日 + 總累積各頁,否則只有總累積各頁
   const seq=[];
   if(s)seq.push({layout:'cards',mode:'today'});
-  seq.push({layout:'cards',mode:'lifetime'});
-  return seq;
+  return seq.concat(life);
 }
 function ensureSlideTimer(){
   clearInterval(slideTimer);
@@ -1879,7 +1895,7 @@ function slideTick(){
   slideSeq=buildSlideSeq();
   slideIdx=(slideIdx+1)%slideSeq.length;
   const sl=slideSeq[slideIdx];
-  ovLayout=sl.layout;ovMode=sl.mode;
+  ovLayout=sl.layout;ovMode=sl.mode;ovPage=sl.page||0;
   const cl=document.getElementById('cardsLayout');
   if(cl){cl.style.animation='none';void cl.offsetWidth;cl.style.animation='';}
   render();
@@ -1889,7 +1905,7 @@ function startSlideshow(){
   document.body.classList.add('slideshow');
   const b=document.getElementById('slideshowBtn');if(b)b.textContent='⏸ 停止輪播';
   slideSeq=buildSlideSeq();slideIdx=0;
-  const sl=slideSeq[slideIdx];ovLayout=sl.layout;ovMode=sl.mode;
+  const sl=slideSeq[slideIdx];ovLayout=sl.layout;ovMode=sl.mode;ovPage=sl.page||0;
   ensureSlideTimer();
   render();
 }
@@ -1919,7 +1935,7 @@ function syncAutoSlideshow(){
     }
     slideSeq=buildSlideSeq();
     if(slideIdx>=slideSeq.length)slideIdx=0;
-    ovLayout='cards';ovMode=slideSeq[slideIdx].mode;
+    ovLayout='cards';ovMode=slideSeq[slideIdx].mode;ovPage=slideSeq[slideIdx].page||0;
     return true;
   }
   if(slideshowAuto){          // 剛離開選位子階段(座位已確定)→ 回實況版面
