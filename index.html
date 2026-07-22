@@ -161,18 +161,18 @@ body.slideshow .tile:nth-child(4){animation-delay:0s,1.8s}
 /* ── 總累積排行榜(表格式)── */
 .lb-wrap{grid-column:1/-1;display:flex;gap:18px;width:100%;max-width:1700px;margin:0 auto;align-items:flex-start}
 .lb-col{flex:1;min-width:0}
-.lb-table{width:100%;border-collapse:collapse;font-size:16px;background:rgba(6,10,8,.9);border-radius:10px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.4)}
-.lb-table th{background:rgba(255,255,255,.05);color:rgba(246,241,227,.65);font-weight:700;font-size:13px;padding:9px 6px;text-align:center;border-bottom:1px solid rgba(246,241,227,.18);letter-spacing:1px}
-.lb-table td{padding:9px 6px;text-align:center;border-bottom:1px solid rgba(246,241,227,.07);font-variant-numeric:tabular-nums;color:var(--ivory)}
+.lb-table{width:100%;border-collapse:collapse;font-size:23px;background:rgba(6,10,8,.9);border-radius:10px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.4)}
+.lb-table th{background:rgba(255,255,255,.05);color:rgba(246,241,227,.65);font-weight:700;font-size:18px;padding:13px 8px;text-align:center;border-bottom:1px solid rgba(246,241,227,.18);letter-spacing:1px}
+.lb-table td{padding:14px 8px;text-align:center;border-bottom:1px solid rgba(246,241,227,.07);font-variant-numeric:tabular-nums;color:var(--ivory)}
 .lb-table tbody tr:last-child td{border-bottom:none}
 .lb-table td.nm{text-align:left;font-weight:900;padding-left:14px;color:#8FD0FF}
-.lb-table td.rk{font-weight:900;font-size:15px;width:56px}
-.lb-table td.sc{font-weight:900;font-size:17px}
+.lb-table td.rk{font-weight:900;font-size:23px;width:64px}
+.lb-table td.sc{font-weight:900;font-size:27px}
 .lb-table tr.up{background:rgba(193,59,46,.32)}    /* 台灣慣例:紅=今日上升 */
 .lb-table tr.up td.nm{color:#FFB4AC}
 .lb-table tr.down{background:rgba(46,139,98,.32)}  /* 綠=今日下降 */
 .lb-table tr.down td.nm{color:#9FE6C2}
-.lb-table td .dl{font-size:13px;font-weight:700;opacity:.9;margin-left:3px}
+.lb-table td .dl{font-size:18px;font-weight:700;opacity:.9;margin-left:4px}
 body.greenscreen .lb-table{background:rgba(6,10,8,.96)}
 body.slideshow .ss-pill{display:block;animation:pillPulse 2s ease-in-out infinite}
 body.greenscreen .ss-pill{display:none!important}
@@ -185,22 +185,22 @@ body.greenscreen .ss-pill{display:none!important}
 body.greenscreen .ov-head .title{text-shadow:0 2px 0 #043}
 body.greenscreen .ov-head .sub{color:#043;font-weight:900}
 
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;max-width:1240px;margin:0 auto}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:22px;max-width:1360px;margin:0 auto}
 .tile{background:var(--ivory);border-radius:16px;padding:22px 18px 18px;color:var(--ink);position:relative;box-shadow:0 6px 0 var(--ivory-side),0 10px 18px rgba(0,0,0,.35);border:1px solid #fff}
-.tile .rank{position:absolute;top:-12px;left:12px;background:var(--jade);color:#fff;font-size:16px;font-weight:900;padding:4px 13px;border-radius:20px;letter-spacing:1px}
+.tile .rank{position:absolute;top:-13px;left:12px;background:var(--jade);color:#fff;font-size:20px;font-weight:900;padding:5px 16px;border-radius:20px;letter-spacing:1px}
 .tile.leader .rank{background:var(--red)}
 .tile.leader{outline:3px solid var(--gold);outline-offset:2px}
-.tile .dealer{position:absolute;top:-12px;right:12px;background:var(--red);color:#fff;font-size:16px;font-weight:900;padding:4px 13px;border-radius:20px;letter-spacing:1px}
-.tile .pname{font-size:28px;font-weight:900;margin-bottom:3px;letter-spacing:1px}
-.tile .seatwind{font-size:16px;color:#8A8264;font-weight:700;margin-bottom:3px}
-.tile .score{font-size:50px;font-weight:900;line-height:1.12;font-variant-numeric:tabular-nums}
-.tile .score.neg{color:var(--red)}
-.tile .score.pos{color:var(--jade)}
+.tile .dealer{position:absolute;top:-13px;right:12px;background:var(--red);color:#fff;font-size:20px;font-weight:900;padding:5px 16px;border-radius:20px;letter-spacing:1px}
+.tile .pname{font-size:38px;font-weight:900;margin-bottom:4px;letter-spacing:1px}
+.tile .seatwind{font-size:21px;color:#8A8264;font-weight:700;margin-bottom:4px}
+.tile .score{font-size:66px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile .score.neg{color:var(--jade)}
+.tile .score.pos{color:var(--red)}
 .tile .stats{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
-.tile .stats span{font-size:16px;font-weight:700;padding:4px 11px;border-radius:6px;background:#EEE7D2;color:#5A5442}
+.tile .stats span{font-size:20px;font-weight:700;padding:5px 13px;border-radius:7px;background:#EEE7D2;color:#5A5442}
 .tile .stats .s-zimo{background:#DCEEE3;color:#1E5C41}
 .tile .stats .s-gun{background:#F6DBD7;color:#8C2A20}
-.tile .life{margin-top:12px;padding-top:10px;border-top:1px dashed #D8CEB2;font-size:16px;color:#6B6551;display:flex;justify-content:space-between}
+.tile .life{margin-top:14px;padding-top:12px;border-top:1px dashed #D8CEB2;font-size:20px;color:#6B6551;display:flex;justify-content:space-between}
 .tile .life b{color:#22201A}
 tr.penrow{background:rgba(193,59,46,.12)}
 tr.penrow td{color:#E8A0A0}
@@ -279,7 +279,7 @@ body.greenscreen .ov-foot{display:none}
 <div id="staleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#C0392B;color:#fff;text-align:center;padding:9px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⚠️ 這個畫面的版本過舊,分數可能不正確 — 請清除快取並重新整理(電腦 Ctrl+Shift+R、OBS 右鍵來源→重新整理快取)</div>
 
 <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0722-0740・b7網底大卡分頁</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0722-1430・b8正紅負綠大字</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
   <div class="tabs">
     <button id="tabControl" class="active" onclick="showView('control')">本場控制台</button>
@@ -1752,7 +1752,7 @@ function renderOverlay(){
     if(!lb.length){
       tiles.innerHTML='<div style="grid-column:1/-1;text-align:center;color:rgba(246,241,227,.5)">尚無資料,開一場牌局後這裡會顯示排行</div>';
     }else{
-      tiles.innerHTML=`<div class="lb-wrap"><div class="lb-col" style="max-width:960px;margin:0 auto">${tbl(rows,page*per+1)}</div></div>`;
+      tiles.innerHTML=`<div class="lb-wrap"><div class="lb-col" style="max-width:1120px;margin:0 auto">${tbl(rows,page*per+1)}</div></div>`;
     }
     document.getElementById('ovTitle').textContent='🏆 本季積分榜'+(totalPages>1?` · 第 ${page+1}/${totalPages} 頁`:'');
     const totalJiangs=db.sessions.reduce((a,ss)=>{const rr=replay(ss);const js=new Set();rr.states.forEach(st=>js.add(Math.floor(st.passes/16)+1));return a+js.size;},0);
@@ -1765,7 +1765,7 @@ function renderOverlay(){
     pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=7;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=8;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
