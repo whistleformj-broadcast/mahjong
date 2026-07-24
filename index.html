@@ -148,15 +148,15 @@ body.greenscreen #ssAmbient{display:none!important}
 /* 中間休息輪播:灰色網底遮住直播畫面,字卡疊在上面 */
 body.slideshow #cardsLayout{background:linear-gradient(to top,rgba(18,22,20,.96) 0%,rgba(18,22,20,.93) 70%,rgba(18,22,20,.86) 100%)}
     /* 開播行程輪播卡 */
-    .sch-wrap{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;align-content:flex-start;max-width:1240px;margin:0 auto}
-    .sch-card{background:var(--ivory);border-radius:16px;padding:18px 24px;min-width:320px;max-width:560px;display:flex;align-items:center;gap:18px;box-shadow:0 6px 20px rgba(0,0,0,.32)}
+    .sch-wrap{display:flex;flex-direction:column;gap:14px;max-width:1120px;margin:0 auto}
+    .sch-card{background:var(--ivory);border-radius:16px;padding:16px 30px;display:flex;align-items:center;gap:24px;box-shadow:0 6px 20px rgba(0,0,0,.32)}
     .sch-card.off{opacity:.72}
     .sch-date{font-size:36px;font-weight:900;color:#22201A;white-space:nowrap;line-height:1}
     .sch-wd{font-size:20px;font-weight:700;color:#8A8264;margin-left:5px}
     .sch-time{font-size:27px;font-weight:900;color:#2E8B62;margin-left:10px}
     .sch-cnt{font-size:20px;font-weight:900;color:#C4443B;background:#F3E9CF;padding:2px 10px;border-radius:12px;margin-right:6px}
     .sch-badge{font-size:20px;font-weight:900;color:#fff;padding:6px 15px;border-radius:22px;white-space:nowrap}
-    .sch-note{font-size:25px;font-weight:800;color:#3F3B2E;flex:1;text-align:left}
+    .sch-note{font-size:24px;font-weight:800;color:#3F3B2E;flex:1;text-align:left;line-height:1.4}
 body.slideshow #cardsLayout .tiles{animation:slideIn .7s ease}
 body.slideshow #cardsLayout .ov-head{animation:slideIn .7s ease}
 @keyframes slideIn{0%{opacity:0;transform:translateY(14px)}100%{opacity:1;transform:translateY(0)}}
@@ -294,7 +294,7 @@ body.greenscreen .ov-foot{display:none}
 <div id="staleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#C0392B;color:#fff;text-align:center;padding:9px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⚠️ 這個畫面的版本過舊,分數可能不正確 — 請清除快取並重新整理(電腦 Ctrl+Shift+R、OBS 右鍵來源→重新整理快取)</div>
 
 <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0724-1611・b26加玩家自動清除</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0725-1646・b28行程一列一場</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
   <div class="tabs">
     <button id="tabControl" class="active" onclick="showView('control')">本場控制台</button>
@@ -1855,7 +1855,7 @@ function renderOverlay(){
     pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':nx.mode==='schedule'?'接下來三週行程':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=26;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=28;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
@@ -2036,7 +2036,7 @@ function renderScheduleEditor(){
     const sus=daySignups(r.date);
     const chips=sus.map(n=>'<span style="font-size:13px;background:#EEE7D2;color:#5A5442;padding:3px 8px;border-radius:10px;white-space:nowrap">'+esc(n)+' <b style="cursor:pointer;color:#C4443B" onclick="adminRemovePlayer(\''+r.date+'\',\''+jsq(n)+'\')">✕</b></span>').join('');
     return '<div style="border:1px solid rgba(216,169,78,.22);border-radius:10px;padding:9px;margin-bottom:10px">'
-      +'<div style="display:grid;grid-template-columns:118px 74px 72px 62px 1fr 32px;gap:6px;align-items:center">'
+      +'<div style="display:grid;grid-template-columns:158px 108px 84px 66px minmax(140px,1fr) 34px;gap:7px;align-items:center">'
         +'<input type="date" value="'+(r.date||'')+'" onchange="updateScheduleField('+i+',\'date\',this.value)">'
         +'<input type="time" value="'+(r.time||'')+'" onchange="updateScheduleField('+i+',\'time\',this.value)">'
         +'<select onchange="updateScheduleField('+i+',\'status\',this.value)">'
