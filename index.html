@@ -147,6 +147,14 @@ body.greenscreen #ssAmbient{display:none!important}
 /* 淡入切換 */
 /* 中間休息輪播:灰色網底遮住直播畫面,字卡疊在上面 */
 body.slideshow #cardsLayout{background:linear-gradient(to top,rgba(18,22,20,.96) 0%,rgba(18,22,20,.93) 70%,rgba(18,22,20,.86) 100%)}
+    /* 開播行程輪播卡 */
+    .sch-wrap{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;align-content:flex-start;max-width:1240px;margin:0 auto}
+    .sch-card{background:var(--ivory);border-radius:16px;padding:18px 24px;min-width:320px;max-width:560px;display:flex;align-items:center;gap:18px;box-shadow:0 6px 20px rgba(0,0,0,.32)}
+    .sch-card.off{opacity:.72}
+    .sch-date{font-size:36px;font-weight:900;color:#22201A;white-space:nowrap;line-height:1}
+    .sch-wd{font-size:20px;font-weight:700;color:#8A8264;margin-left:5px}
+    .sch-badge{font-size:20px;font-weight:900;color:#fff;padding:6px 15px;border-radius:22px;white-space:nowrap}
+    .sch-note{font-size:25px;font-weight:800;color:#3F3B2E;flex:1;text-align:left}
 body.slideshow #cardsLayout .tiles{animation:slideIn .7s ease}
 body.slideshow #cardsLayout .ov-head{animation:slideIn .7s ease}
 @keyframes slideIn{0%{opacity:0;transform:translateY(14px)}100%{opacity:1;transform:translateY(0)}}
@@ -284,10 +292,11 @@ body.greenscreen .ov-foot{display:none}
 <div id="staleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#C0392B;color:#fff;text-align:center;padding:9px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⚠️ 這個畫面的版本過舊,分數可能不正確 — 請清除快取並重新整理(電腦 Ctrl+Shift+R、OBS 右鍵來源→重新整理快取)</div>
 
 <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0723-0144・b13莊徽章調整</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0724-0403・b16將數修正</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
   <div class="tabs">
     <button id="tabControl" class="active" onclick="showView('control')">本場控制台</button>
+    <button id="tabSchedule" onclick="showView('schedule')">開播行程</button>
     <button id="tabHistory" onclick="showView('history')">玩家與歷史</button>
     <button id="tabOverlay" onclick="showView('overlay')">直播畫面</button>
   </div>
@@ -431,6 +440,16 @@ body.greenscreen .ov-foot{display:none}
         <tbody id="historyBody"></tbody>
       </table>
     </div>
+  </div>
+</div>
+
+<!-- ═══════════ 開播行程 ═══════════ -->
+<div id="scheduleView" class="wrap" style="display:none">
+  <div class="panel">
+    <h2>📅 開播行程</h2>
+    <div style="font-size:13px;color:rgba(246,241,227,.7);line-height:1.7;margin-bottom:14px">填未來的開播日,輪播會顯示「接下來三週」讓觀眾知道哪幾天有開、當天確定有誰。<br>狀態:確定開 / 暫定 / 休息。只會顯示今天起 21 天內的行程。</div>
+    <div id="scheduleList"></div>
+    <div class="btnrow"><button class="btn btn-outline" onclick="addScheduleRow()">＋ 新增一天</button></div>
   </div>
 </div>
 
@@ -635,6 +654,7 @@ function normalize(d){
   d.savedLayout=d.savedLayout||null; // 已儲存的版面
   d.fontSummary=+d.fontSummary||1;   // 計分表字級
   d.fontCards=+d.fontCards||1;       // 小卡字級
+  d.schedule=Array.isArray(d.schedule)?d.schedule:Object.values(d.schedule||{});  // 開播行程
   d.roster=Array.isArray(d.roster)?d.roster:Object.values(d.roster||{});
   d.sessions=Array.isArray(d.sessions)?d.sessions:Object.values(d.sessions||{});
   d.sessions.forEach(s=>{
@@ -1316,6 +1336,7 @@ function render(){
     sb.appendChild(tr);
   });
 
+  renderScheduleEditor();
   renderOverlay();
   checkStale();
 }
@@ -1645,6 +1666,8 @@ function renderBroadcast(){
 
   const t=sessionTotals(s);
   const r=replay(s);
+  // 每位玩家在本場實際坐上桌的將數(換上換下正確計算,與排行榜同算法)
+  const jc={};{const jset=new Set();r.states.forEach(st=>jset.add(Math.floor(st.passes/16)+1));jset.forEach(j=>{seatingForJiang(s,j).forEach(pid=>{jc[pid]=(jc[pid]||0)+1})});}
 
   // 排名:依當日分數
   const ranked=t.map((x,i)=>({...x,i})).sort((a,b)=>b.score-a.score);
@@ -1660,7 +1683,7 @@ function renderBroadcast(){
       `<td class="nm">${nameOf(p.pid)}</td>`+
       cell((p.score>0?'+':'')+p.score, scoreCls)+
       cell(p.zimo)+cell(p.ron)+cell(p.gun)+cell(p.mo)+
-      cell(Math.floor(r.passes/16)+1)+
+      cell(jc[p.pid]||0)+
       '</tr>';
   });
   summaryEl.innerHTML=`<table>
@@ -1721,7 +1744,31 @@ function renderOverlay(){
   const lifeMap={};life.forEach(p=>lifeMap[p.id]=p);
   const s=curSession();
 
-  if(ovMode==='today'&&s){
+  if(ovMode==='schedule'){
+    const today=new Date();today.setHours(0,0,0,0);
+    const end=new Date(today);end.setDate(end.getDate()+21);
+    const wd=['日','一','二','三','四','五','六'];
+    const stMap={open:{t:'確定開',c:'#37D08A'},tentative:{t:'暫定',c:'#E6B84A'},off:{t:'休息',c:'#9AA0A6'}};
+    const items=(db.schedule||[]).filter(r=>r&&r.date)
+      .map(r=>({...r,d:new Date(r.date+'T00:00:00')}))
+      .filter(r=>!isNaN(r.d)&&r.d>=today&&r.d<=end)
+      .sort((a,b)=>a.d-b.d);
+    if(!items.length){
+      tiles.innerHTML='<div style="grid-column:1/-1;text-align:center;color:rgba(246,241,227,.55);font-size:28px;padding:50px 20px">近三週尚未安排,敬請期待 🀄</div>';
+    }else{
+      tiles.innerHTML='<div class="sch-wrap">'+items.map(r=>{
+        const stt=stMap[r.status||'open']||stMap.open;
+        const md=(r.d.getMonth()+1)+'/'+r.d.getDate();
+        const note=r.note?r.note:(r.status==='off'?'休息一天':'陣容未定');
+        return '<div class="sch-card'+(r.status==='off'?' off':'')+'">'
+          +'<div class="sch-date">'+md+'<span class="sch-wd">('+wd[r.d.getDay()]+')</span></div>'
+          +'<div class="sch-badge" style="background:'+stt.c+'">'+stt.t+'</div>'
+          +'<div class="sch-note">'+note+'</div></div>';
+      }).join('')+'</div>';
+    }
+    document.getElementById('ovTitle').textContent='📅 接下來三週';
+    document.getElementById('ovRound').textContent='開播行程・哪幾天有開、當天有誰';
+  }else if(ovMode==='today'&&s){
     const r=replay(s);
     const pt=playerTotals(s);              // 本場每位玩家(含換上換下)的分數
     // 目前在座者:playerId → 座位index
@@ -1789,10 +1836,10 @@ function renderOverlay(){
   const pill=document.getElementById('ssPill');
   if(pill&&slideshow&&slideSeq.length>1){
     const nx=slideSeq[(slideIdx+1)%slideSeq.length];
-    pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
+    pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':nx.mode==='schedule'?'接下來三週行程':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=13;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=16;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
@@ -1882,9 +1929,10 @@ async function wipeAll(){
 /* ── 檢視切換 ── */
 function showView(v){
   document.getElementById('controlView').style.display=v==='control'?'block':'none';
+  document.getElementById('scheduleView').style.display=v==='schedule'?'block':'none';
   document.getElementById('historyView').style.display=v==='history'?'block':'none';
   document.getElementById('overlayView').style.display=v==='overlay'?'block':'none';
-  ['Control','History','Overlay'].forEach(n=>document.getElementById('tab'+n).classList.toggle('active',n.toLowerCase()===v));
+  ['Control','Schedule','History','Overlay'].forEach(n=>document.getElementById('tab'+n).classList.toggle('active',n.toLowerCase()===v));
   document.body.classList.toggle('ovview',v==='overlay');
   if(v!=='overlay'){document.body.classList.remove('greenscreen');stopSlideshow();}
 }
@@ -1896,21 +1944,63 @@ function awaitingSeating(s){
   const curJ=Math.floor(passes/16)+1;
   return !seatingList(s).some(x=>(x.jiang||1)===curJ); // 第1將開局已指定
 }
+function scheduleUpcoming(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const end=new Date(today);end.setDate(end.getDate()+21);
+  return (db.schedule||[]).some(r=>{if(!r||!r.date)return false;const d=new Date(r.date+'T00:00:00');return !isNaN(d)&&d>=today&&d<=end;});
+}
+function todayISO(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function addScheduleRow(){
+  db.schedule=db.schedule||[];
+  db.schedule.push({date:todayISO(),status:'open',note:''});
+  db.schedule.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  save();
+}
+function updateScheduleField(idx,field,val){
+  if(!db.schedule||!db.schedule[idx])return;
+  db.schedule[idx][field]=val;
+  if(field==='date')db.schedule.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  save();
+}
+function removeScheduleRow(idx){
+  if(!db.schedule||idx<0||idx>=db.schedule.length)return;
+  db.schedule.splice(idx,1);save();
+}
+function renderScheduleEditor(){
+  const el=document.getElementById('scheduleList');if(!el)return;
+  const sc=db.schedule||[];
+  if(!sc.length){el.innerHTML='<div style="font-size:13px;color:rgba(246,241,227,.5);padding:6px 0">尚未新增行程,按下方「新增一天」。</div>';return;}
+  el.innerHTML=sc.map((r,i)=>{
+    const st=r.status||'open';
+    const nv=(r.note||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    return '<div style="display:grid;grid-template-columns:150px 100px 1fr 40px;gap:8px;align-items:center;margin-bottom:8px">'
+      +'<input type="date" value="'+(r.date||'')+'" onchange="updateScheduleField('+i+",'date',this.value)\">"
+      +'<select onchange="updateScheduleField('+i+",'status',this.value)\">"
+        +'<option value="open"'+(st==='open'?' selected':'')+'>確定開</option>'
+        +'<option value="tentative"'+(st==='tentative'?' selected':'')+'>暫定</option>'
+        +'<option value="off"'+(st==='off'?' selected':'')+'>休息</option>'
+      +'</select>'
+      +'<input type="text" placeholder="當天陣容/備註,例:哨子、里歐、珍" value="'+nv+'" onchange="updateScheduleField('+i+",'note',this.value)\">"
+      +'<button class="btn btn-outline" style="padding:6px 8px" onclick="removeScheduleRow('+i+')">✕</button>'
+    +'</div>';
+  }).join('');
+}
 function buildSlideSeq(){
   // 總累積榜:每 10 人一張,人數變多會自動增加頁數(無限翻頁)
   const per=10;
   const lbCount=lifetimeLeaderboard().length;
   const pages=Math.max(1,Math.ceil(lbCount/per));
   const life=[];for(let k=0;k<pages;k++)life.push({layout:'cards',mode:'lifetime',page:k});
+  const sch=scheduleUpcoming()?[{layout:'cards',mode:'schedule'}]:[];
   const s=curSession();
-  // 選位子階段(開播前):今日大卡 → 總累積榜各頁
+  // 選位子階段(開播前):今日大卡 → 總累積榜各頁 → 行程
   if(slideshowAuto){
-    return s?[{layout:'cards',mode:'today'},...life]:life;
+    return s?[{layout:'cards',mode:'today'},...life,...sch]:[...life,...sch];
   }
-  // 手動輪播:有牌局則今日 + 總累積各頁,否則只有總累積各頁
+  // 手動輪播:有牌局則今日 + 總累積各頁 + 行程
   const seq=[];
   if(s)seq.push({layout:'cards',mode:'today'});
-  return seq.concat(life);
+  return seq.concat(life,sch);
 }
 function ensureSlideTimer(){
   clearInterval(slideTimer);
