@@ -153,6 +153,7 @@ body.slideshow #cardsLayout{background:linear-gradient(to top,rgba(18,22,20,.96)
     .sch-card.off{opacity:.72}
     .sch-date{font-size:36px;font-weight:900;color:#22201A;white-space:nowrap;line-height:1}
     .sch-wd{font-size:20px;font-weight:700;color:#8A8264;margin-left:5px}
+    .sch-time{font-size:27px;font-weight:900;color:#2E8B62;margin-left:10px}
     .sch-badge{font-size:20px;font-weight:900;color:#fff;padding:6px 15px;border-radius:22px;white-space:nowrap}
     .sch-note{font-size:25px;font-weight:800;color:#3F3B2E;flex:1;text-align:left}
 body.slideshow #cardsLayout .tiles{animation:slideIn .7s ease}
@@ -221,11 +222,11 @@ tr.penrow td.round{color:#C13B2E;font-weight:900}
 /* 超過十台自摸:數字噴火特效 */
 .bc-corner.firing{overflow:visible!important;z-index:20}
     /* 分數變化浮動字 +X/-X(台灣慣例:加分紅、扣分綠),浮起淡出後消失 */
-    .score-delta{position:absolute;transform:translate(-50%,-50%);font-size:46px;font-weight:900;font-variant-numeric:tabular-nums;pointer-events:none;z-index:60;text-shadow:0 2px 10px rgba(0,0,0,.7),0 0 4px rgba(0,0,0,.6);animation:deltaFloat 1.6s cubic-bezier(.2,.7,.3,1) forwards}
+    .score-delta{position:absolute;transform:translate(-50%,-50%);font-size:46px;font-weight:900;font-variant-numeric:tabular-nums;pointer-events:none;z-index:60;text-shadow:0 2px 10px rgba(0,0,0,.7),0 0 4px rgba(0,0,0,.6);animation:deltaFloat 3s cubic-bezier(.2,.7,.3,1) forwards}
     .score-delta.up{color:#FF5A4D}
     .score-delta.down{color:#37D08A}
     @keyframes deltaFloat{0%{opacity:0;transform:translate(-50%,-20%) scale(.5)}14%{opacity:1;transform:translate(-50%,-55%) scale(1.2)}28%{transform:translate(-50%,-72%) scale(1)}100%{opacity:0;transform:translate(-50%,-165%) scale(1)}}
-.bc-corner .sc.fire{animation:scFire 2.5s ease-out;position:relative;z-index:6}
+.bc-corner .sc.fire{animation:scFire 4.5s ease-out;position:relative;z-index:6}
 @keyframes scFire{
   0%{color:#fff;text-shadow:0 0 4px #fff}
   10%{color:#FFF3C4;text-shadow:0 0 10px #FFD54A,0 0 22px #FF8A00,0 -8px 26px #FF5100,0 -14px 34px #FF2D00}
@@ -236,7 +237,7 @@ tr.penrow td.round{color:#C13B2E;font-weight:900}
   100%{color:inherit;text-shadow:none}
 }
 .fire-fx{position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:30px;pointer-events:none;z-index:7;
-  animation:fireRise 2s ease-out forwards;filter:drop-shadow(0 0 8px #FF5100)}
+  animation:fireRise 4s ease-out forwards;filter:drop-shadow(0 0 8px #FF5100)}
 @keyframes fireRise{
   0%{opacity:0;transform:translate(-50%,10px) scale(.5)}
   15%{opacity:1;transform:translate(-50%,-6px) scale(1.25)}
@@ -292,7 +293,7 @@ body.greenscreen .ov-foot{display:none}
 <div id="staleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#C0392B;color:#fff;text-align:center;padding:9px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⚠️ 這個畫面的版本過舊,分數可能不正確 — 請清除快取並重新整理(電腦 Ctrl+Shift+R、OBS 右鍵來源→重新整理快取)</div>
 
 <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0724-0403・b16將數修正</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0724-0428・b20特效延長</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
   <div class="tabs">
     <button id="tabControl" class="active" onclick="showView('control')">本場控制台</button>
@@ -1642,7 +1643,7 @@ function spawnDelta(cornerId,delta){
   d.style.left=(cr.left-br.left+cr.width*0.5)+'px';
   d.style.top=(cr.top-br.top+cr.height*0.42)+'px';
   bc.appendChild(d);
-  setTimeout(()=>d.remove(),1700);
+  setTimeout(()=>d.remove(),3100);
 }
 function renderBroadcast(){
   const s=curSession();
@@ -1655,9 +1656,9 @@ function renderBroadcast(){
 
   if(!s){
     summaryEl.style.display='none';titleEl.style.display='none';
-    ['cornerN','cornerW','cornerE','cornerS'].forEach(id=>document.getElementById(id).innerHTML='');
+    ['cornerN','cornerW','cornerE','cornerS'].forEach(id=>{const el=document.getElementById(id);if(el){el.innerHTML='';el.style.display='none';}});
     hintEl.style.display='block';
-    hintEl.innerHTML='目前沒有進行中的牌局<br><span style="font-size:14px;color:rgba(246,241,227,.6)">到「本場控制台」開新牌局後,這裡會顯示四家即時比分</span>';
+    hintEl.innerHTML='即將開播,請稍待片刻!';
     bindDrag();applyPositions();
     return;
   }
@@ -1706,6 +1707,7 @@ function renderBroadcast(){
     const pid=currentOccupant(s,i);
     const el=document.getElementById(seatToCorner[i]);
     if(!el)return;
+    el.style.display='';   // 從等待畫面切回時恢復顯示
     const isDealer=i===r.dealer;
     const cscore=lifeScore[pid]||0;                 // 顯示當季累積分數
     const scoreCls=cscore>0?'p':cscore<0?'n':'';
@@ -1759,14 +1761,15 @@ function renderOverlay(){
       tiles.innerHTML='<div class="sch-wrap">'+items.map(r=>{
         const stt=stMap[r.status||'open']||stMap.open;
         const md=(r.d.getMonth()+1)+'/'+r.d.getDate();
+        const tm=r.time?' <span class="sch-time">'+r.time+'</span>':'';
         const note=r.note?r.note:(r.status==='off'?'休息一天':'陣容未定');
         return '<div class="sch-card'+(r.status==='off'?' off':'')+'">'
-          +'<div class="sch-date">'+md+'<span class="sch-wd">('+wd[r.d.getDay()]+')</span></div>'
+          +'<div class="sch-date">'+md+'<span class="sch-wd">('+wd[r.d.getDay()]+')</span>'+tm+'</div>'
           +'<div class="sch-badge" style="background:'+stt.c+'">'+stt.t+'</div>'
           +'<div class="sch-note">'+note+'</div></div>';
       }).join('')+'</div>';
     }
-    document.getElementById('ovTitle').textContent='📅 接下來三週';
+    document.getElementById('ovTitle').textContent='📅 開播行程';
     document.getElementById('ovRound').textContent='開播行程・哪幾天有開、當天有誰';
   }else if(ovMode==='today'&&s){
     const r=replay(s);
@@ -1839,7 +1842,7 @@ function renderOverlay(){
     pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':nx.mode==='schedule'?'接下來三週行程':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=16;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=20;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
@@ -1870,8 +1873,8 @@ function fireCard(card){
   if(sc){sc.classList.remove('fire');void sc.offsetWidth;sc.classList.add('fire');}
   const f=document.createElement('div');f.className='fire-fx';f.textContent='🔥';
   card.appendChild(f);
-  setTimeout(()=>{if(f.parentNode)f.remove()},2000);
-  setTimeout(()=>{if(sc)sc.classList.remove('fire');card.classList.remove('firing')},2600);
+  setTimeout(()=>{if(f.parentNode)f.remove()},4000);
+  setTimeout(()=>{if(sc)sc.classList.remove('fire');card.classList.remove('firing')},4600);
 }
 /* 11台以上:從贏家名字射出隕石,砸向每位扣分者 */
 function triggerMeteor(winnerSeat,payerSeats){
@@ -1904,7 +1907,7 @@ function impactCard(card){
   const boom=document.createElement('div');boom.className='impact-fx';boom.textContent='💥';
   card.appendChild(boom);
   setTimeout(()=>{if(boom.parentNode)boom.remove()},900);
-  setTimeout(()=>{if(sc)sc.classList.remove('fire');card.classList.remove('firing')},2600);
+  setTimeout(()=>{if(sc)sc.classList.remove('fire');card.classList.remove('firing')},4600);
 }
 function flashOverlay(){document.querySelectorAll('.tile').forEach(t=>{t.classList.remove('flash');void t.offsetWidth;t.classList.add('flash')})}  // 只閃桌上的牌,小卡完全不動畫(避免大小跳動)
 
@@ -1952,7 +1955,7 @@ function scheduleUpcoming(){
 function todayISO(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function addScheduleRow(){
   db.schedule=db.schedule||[];
-  db.schedule.push({date:todayISO(),status:'open',note:''});
+  db.schedule.push({date:todayISO(),status:'open',time:'',note:''});
   db.schedule.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   save();
 }
@@ -1973,8 +1976,9 @@ function renderScheduleEditor(){
   el.innerHTML=sc.map((r,i)=>{
     const st=r.status||'open';
     const nv=(r.note||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
-    return '<div style="display:grid;grid-template-columns:150px 100px 1fr 40px;gap:8px;align-items:center;margin-bottom:8px">'
+    return '<div style="display:grid;grid-template-columns:140px 96px 92px 1fr 40px;gap:8px;align-items:center;margin-bottom:8px">'
       +'<input type="date" value="'+(r.date||'')+'" onchange="updateScheduleField('+i+",'date',this.value)\">"
+      +'<input type="time" value="'+(r.time||'')+'" onchange="updateScheduleField('+i+",'time',this.value)\">"
       +'<select onchange="updateScheduleField('+i+",'status',this.value)\">"
         +'<option value="open"'+(st==='open'?' selected':'')+'>確定開</option>'
         +'<option value="tentative"'+(st==='tentative'?' selected':'')+'>暫定</option>'
