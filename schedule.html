@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>🀄 開播行程登記</title>
+<!-- 這是「牌咖共用」的行程登記頁,只會讀寫 Firebase 的 schedule 節點,絕不會動到計分資料 -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --felt:#0f5132; --felt2:#0b3d26; --gold:#D8A94E; --ivory:#F6F1E3;
+    --jade:#2E8B62; --red:#C4443B; --muted:rgba(246,241,227,.62);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
+    background:linear-gradient(160deg,var(--felt),var(--felt2));color:var(--ivory);min-height:100vh;padding:16px 14px 60px}
+  .head{max-width:640px;margin:0 auto 14px}
+  h1{font-size:24px;margin:0 0 4px;letter-spacing:2px;color:var(--gold);font-weight:900}
+  .sub{font-size:13px;color:var(--muted);line-height:1.6}
+  #badge{display:inline-block;font-size:12px;font-weight:700;margin-top:8px;padding:3px 10px;border-radius:20px;background:rgba(0,0,0,.25)}
+  .wrap{max-width:640px;margin:0 auto}
+  .card{background:rgba(255,255,255,.06);border:1px solid rgba(216,169,78,.28);border-radius:14px;padding:14px;margin-bottom:14px}
+  .card.past{opacity:.5}
+  .row1{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+  input[type=date]{font-size:16px;font-weight:800;color:var(--ivory);background:rgba(0,0,0,.3);border:1px solid rgba(216,169,78,.4);border-radius:8px;padding:8px 10px;font-family:inherit}
+  .wd{font-size:15px;font-weight:800;color:var(--gold)}
+  .past-tag{font-size:11px;color:var(--muted);border:1px solid var(--muted);border-radius:10px;padding:1px 7px}
+  .del{margin-left:auto;background:transparent;border:1px solid rgba(196,68,59,.6);color:#F0A79F;border-radius:8px;padding:7px 11px;font-size:14px;font-weight:700;cursor:pointer}
+  .seg{display:flex;gap:6px;margin-bottom:10px}
+  .seg button{flex:1;font-size:14px;font-weight:800;padding:9px 4px;border-radius:9px;border:1px solid rgba(255,255,255,.18);
+    background:rgba(0,0,0,.22);color:var(--ivory);cursor:pointer;font-family:inherit}
+  .seg button.on.open{background:#37D08A;border-color:#37D08A;color:#08301f}
+  .seg button.on.tentative{background:#E6B84A;border-color:#E6B84A;color:#3a2c00}
+  .seg button.on.off{background:#9AA0A6;border-color:#9AA0A6;color:#222}
+  .notelab{font-size:12px;color:var(--muted);margin-bottom:4px}
+  textarea{width:100%;font-size:15px;color:var(--ivory);background:rgba(0,0,0,.3);border:1px solid rgba(216,169,78,.35);
+    border-radius:9px;padding:9px 11px;font-family:inherit;resize:vertical;min-height:44px;line-height:1.5}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chip{font-size:13px;font-weight:700;padding:6px 11px;border-radius:16px;border:1px solid rgba(216,169,78,.45);
+    background:rgba(216,169,78,.12);color:var(--gold);cursor:pointer}
+  .chip:active{background:rgba(216,169,78,.3)}
+  .add{display:block;width:100%;max-width:640px;margin:4px auto 0;font-size:16px;font-weight:900;padding:14px;
+    border-radius:12px;border:1px dashed rgba(216,169,78,.6);background:rgba(216,169,78,.1);color:var(--gold);cursor:pointer;font-family:inherit}
+  .empty{text-align:center;color:var(--muted);padding:30px 10px;font-size:15px}
+  .foot{max-width:640px;margin:18px auto 0;font-size:12px;color:var(--muted);line-height:1.7;text-align:center}
+  .savetip{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--jade);color:#fff;font-weight:800;
+    font-size:14px;padding:10px 20px;border-radius:24px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:50;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+  .savetip.show{opacity:1}
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>🀄 開播行程登記</h1>
+    <div class="sub">大家可以自己來登記哪天要來打牌!選日期、狀態,並把自己的名字加進當天陣容。<br>資料會即時同步到直播畫面的輪播。</div>
+    <span id="badge">⚪ 連線中…</span>
+  </div>
+
+  <div class="wrap" id="list"><div class="empty">載入中…</div></div>
+  <button class="add" onclick="addDay()">＋ 新增一天</button>
+
+  <div class="foot">
+    只會更新「開播行程」,不會影響任何計分資料。<br>
+    直播畫面輪播只會顯示<b>今天起 21 天內</b>的行程。
+  </div>
+  <div class="savetip" id="savetip">✓ 已同步</div>
+
+<script>
+/* ===== Firebase(與計分主檔同一個專案 / 同一個房間)===== */
+const firebaseConfig = {
+  apiKey: "AIzaSyDtdbutDjabe9FDj9Z5HXQkj5m1NAtXj6I",
+  authDomain: "live-mjbroadcast2026.firebaseapp.com",
+  databaseURL: "https://live-mjbroadcast2026-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "live-mjbroadcast2026",
+  storageBucket: "live-mjbroadcast2026.firebasestorage.app",
+  messagingSenderId: "993789032431",
+  appId: "1:993789032431:web:41480070253c3c2cf5281a"
+};
+const ROOM_ID = "howard-mj-room-2026";
+
+let schedRef=null, rosterRef=null;
+let schedule=[];      // 目前行程(隨 Firebase 即時更新)
+let roster=[];        // 玩家名冊(只讀,用來做快速加名字)
+let ready=false;
+
+function setBadge(t,c){const b=document.getElementById('badge');b.textContent=t;b.style.color=c||'';}
+function toISO(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function asArray(v){return Array.isArray(v)?v:Object.values(v||{});}
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+/* 只寫 schedule 節點,永遠不碰計分資料 */
+function writeSchedule(){
+  if(!ready||!schedRef)return;
+  schedule.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  schedRef.set(schedule).then(showSaved).catch(e=>setBadge('🔴 寫入失敗:'+e.code,'#F0A79F'));
+}
+let saveTimer=null;
+function showSaved(){
+  const t=document.getElementById('savetip');t.classList.add('show');
+  clearTimeout(saveTimer);saveTimer=setTimeout(()=>t.classList.remove('show'),1200);
+}
+
+function addDay(){
+  if(!ready)return;
+  schedule.push({date:toISO(new Date()),status:'open',note:''});
+  writeSchedule();
+}
+function removeDay(i){
+  if(!schedule[i])return;
+  if(!confirm('確定刪掉「'+(schedule[i].date||'這一天')+'」的行程?'))return;
+  schedule.splice(i,1);writeSchedule();
+}
+function setField(i,f,v){ if(schedule[i]){schedule[i][f]=v;writeSchedule();} }
+function setStatus(i,v){ setField(i,'status',v); }
+function appendName(i,name){
+  if(!schedule[i])return;
+  const cur=(schedule[i].note||'').trim();
+  const parts=cur?cur.split(/[、,，\s]+/).filter(Boolean):[];
+  if(parts.includes(name)){ // 再按一次 = 移除自己
+    schedule[i].note=parts.filter(n=>n!==name).join('、');
+  }else{
+    parts.push(name);schedule[i].note=parts.join('、');
+  }
+  writeSchedule();
+}
+
+const WD=['日','一','二','三','四','五','六'];
+function render(){
+  const el=document.getElementById('list');
+  if(!schedule.length){
+    el.innerHTML='<div class="empty">還沒有任何行程,按下面「＋ 新增一天」開始登記 🀄</div>';return;
+  }
+  const today=new Date();today.setHours(0,0,0,0);
+  el.innerHTML=schedule.map((r,i)=>{
+    const d=r.date?new Date(r.date+'T00:00:00'):null;
+    const valid=d&&!isNaN(d);
+    const isPast=valid&&d<today;
+    const wd=valid?'(週'+WD[d.getDay()]+')':'';
+    const st=r.status||'open';
+    const noteNames=(r.note||'').split(/[、,，\s]+/).filter(Boolean);
+    const chips=roster.map(p=>{
+      const on=noteNames.includes(p.name);
+      return '<span class="chip" style="'+(on?'background:rgba(216,169,78,.35)':'')+'" onclick="appendName('+i+',\''+esc(p.name).replace(/'/g,"\\'")+'\')">'+(on?'✓ ':'')+esc(p.name)+'</span>';
+    }).join('');
+    return '<div class="card'+(isPast?' past':'')+'">'
+      +'<div class="row1">'
+        +'<input type="date" value="'+(r.date||'')+'" onchange="setField('+i+',\'date\',this.value)">'
+        +'<span class="wd">'+wd+'</span>'
+        +(isPast?'<span class="past-tag">已過</span>':'')
+        +'<button class="del" onclick="removeDay('+i+')">刪除</button>'
+      +'</div>'
+      +'<div class="seg">'
+        +'<button class="'+(st==='open'?'on open':'')+'" onclick="setStatus('+i+',\'open\')">確定開</button>'
+        +'<button class="'+(st==='tentative'?'on tentative':'')+'" onclick="setStatus('+i+',\'tentative\')">暫定</button>'
+        +'<button class="'+(st==='off'?'on off':'')+'" onclick="setStatus('+i+',\'off\')">休息</button>'
+      +'</div>'
+      +'<div class="notelab">當天陣容 / 備註</div>'
+      +'<textarea placeholder="例:哨子、里歐、珍" onchange="setField('+i+',\'note\',this.value)">'+esc(r.note||'')+'</textarea>'
+      +(roster.length?'<div class="notelab" style="margin-top:8px">點名字快速加入 / 移除自己:</div><div class="chips">'+chips+'</div>':'')
+    +'</div>';
+  }).join('');
+}
+
+/* ===== 啟動 ===== */
+(function init(){
+  if(typeof firebase==='undefined'||!firebase.initializeApp){
+    setBadge('🔴 Firebase 載入失敗(網路或擴充功能擋住)','#F0A79F');return;
+  }
+  try{ firebase.initializeApp(firebaseConfig); }catch(e){}
+  firebase.auth().signInAnonymously().catch(e=>setBadge('🔴 登入失敗:請確認已啟用匿名登入','#F0A79F'));
+  firebase.auth().onAuthStateChanged(user=>{
+    if(!user)return;
+    ready=true; setBadge('🟢 已連線,可以登記了','#8FE3B5');
+    schedRef=firebase.database().ref('rooms/'+ROOM_ID+'/schedule');
+    rosterRef=firebase.database().ref('rooms/'+ROOM_ID+'/roster');
+    schedRef.on('value',s=>{ schedule=asArray(s.val()); render(); });
+    rosterRef.on('value',s=>{ roster=asArray(s.val()).filter(p=>p&&p.name); render(); });
+  });
+})();
+</script>
+</body>
+</html>
