@@ -294,7 +294,7 @@ body.greenscreen .ov-foot{display:none}
 <div id="staleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#C0392B;color:#fff;text-align:center;padding:9px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⚠️ 這個畫面的版本過舊,分數可能不正確 — 請清除快取並重新整理(電腦 Ctrl+Shift+R、OBS 右鍵來源→重新整理快取)</div>
 
 <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0724-1521・b24報名卡片</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0724-1611・b26加玩家自動清除</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
   <div class="tabs">
     <button id="tabControl" class="active" onclick="showView('control')">本場控制台</button>
@@ -1754,17 +1754,18 @@ function renderOverlay(){
     const end=new Date(today);end.setDate(end.getDate()+21);
     const wd=['日','一','二','三','四','五','六'];
     const stMap={open:{t:'確定開',c:'#37D08A'},tentative:{t:'暫定',c:'#E6B84A'},off:{t:'休息',c:'#9AA0A6'}};
+    const _now=new Date();
     const items=(db.schedule||[]).filter(r=>r&&r.date)
-      .map(r=>({...r,d:new Date(r.date+'T00:00:00')}))
-      .filter(r=>!isNaN(r.d)&&r.d>=today&&r.d<=end)
-      .sort((a,b)=>a.d-b.d);
+      .map(r=>{const tm=(r.time&&/^\d{1,2}:\d{2}$/.test(r.time))?r.time:'23:59';return {...r,d:new Date(r.date+'T00:00:00'),start:new Date(r.date+'T'+tm+':00')};})
+      .filter(r=>!isNaN(r.start)&&r.start>_now&&r.d<=end)
+      .sort((a,b)=>a.start-b.start);
     if(!items.length){
       tiles.innerHTML='<div style="grid-column:1/-1;text-align:center;color:rgba(246,241,227,.55);font-size:28px;padding:50px 20px">近三週尚未安排,敬請期待 🀄</div>';
     }else{
       tiles.innerHTML='<div class="sch-wrap">'+items.map(r=>{
         const stt=stMap[r.status||'open']||stMap.open;
         const md=(r.d.getMonth()+1)+'/'+r.d.getDate();
-        const tm=r.time?' <span class="sch-time">'+r.time+'</span>':'';
+        const tm=(r.time?' <span class="sch-time">'+r.time+'</span>':'')+(r.jiang?' <span class="sch-time">'+r.jiang+'將</span>':'');
         const esc=x=>(''+(x||'')).replace(/[<>&]/g,'');
         const sus=daySignups(r.date);
         let note;
@@ -1854,7 +1855,7 @@ function renderOverlay(){
     pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':nx.mode==='schedule'?'接下來三週行程':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=24;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=26;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
@@ -2010,50 +2011,101 @@ function addScheduleRow(){
   db.schedule=db.schedule||[];
   db.schedule.push({date:todayISO(),status:'open',time:'',note:''});
   db.schedule.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-  save();queueScheduleNotify();
+  save();
 }
 function updateScheduleField(idx,field,val){
   if(!db.schedule||!db.schedule[idx])return;
   db.schedule[idx][field]=val;
   if(field==='date')db.schedule.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-  save();queueScheduleNotify();
+  save();
 }
 function removeScheduleRow(idx){
   if(!db.schedule||idx<0||idx>=db.schedule.length)return;
-  db.schedule.splice(idx,1);save();queueScheduleNotify();
+  db.schedule.splice(idx,1);save();
 }
 function renderScheduleEditor(){
   const el=document.getElementById('scheduleList');if(!el)return;
   const sc=db.schedule||[];
   if(!sc.length){el.innerHTML='<div style="font-size:13px;color:rgba(246,241,227,.5);padding:6px 0">尚未新增行程,按下方「新增一天」。</div>';return;}
+  const esc=x=>(''+(x||'')).replace(/[<>&]/g,'');
+  const jsq=x=>(''+(x||'')).replace(/['"\\]/g,'');
   el.innerHTML=sc.map((r,i)=>{
     const st=r.status||'open';
     const nv=(r.note||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
-    return '<div style="display:grid;grid-template-columns:126px 84px 76px 1fr 36px 40px;gap:7px;align-items:center;margin-bottom:8px">'
-      +'<input type="date" value="'+(r.date||'')+'" onchange="updateScheduleField('+i+',\'date\',this.value)">'
-      +'<input type="time" value="'+(r.time||'')+'" onchange="updateScheduleField('+i+',\'time\',this.value)">'
-      +'<select onchange="updateScheduleField('+i+',\'status\',this.value)">'
-        +'<option value="open"'+(st==='open'?' selected':'')+'>確定開</option>'
-        +'<option value="tentative"'+(st==='tentative'?' selected':'')+'>暫定</option>'
-        +'<option value="off"'+(st==='off'?' selected':'')+'>休息</option>'
-      +'</select>'
-      +'<input type="text" placeholder="備註(選填),例:地點" value="'+nv+'" onchange="updateScheduleField('+i+',\'note\',this.value)">'
-      +'<button class="btn btn-outline" style="padding:6px 4px" title="刪除這天" onclick="removeScheduleRow('+i+')">✕</button>'
-      +'<button class="btn btn-outline" style="padding:6px 4px" title="發報名卡到LINE群組" onclick="sendSignupCard('+i+')">📢</button>'
+    const jv=r.jiang?(''+r.jiang).replace(/[^0-9]/g,''):'';
+    const sus=daySignups(r.date);
+    const chips=sus.map(n=>'<span style="font-size:13px;background:#EEE7D2;color:#5A5442;padding:3px 8px;border-radius:10px;white-space:nowrap">'+esc(n)+' <b style="cursor:pointer;color:#C4443B" onclick="adminRemovePlayer(\''+r.date+'\',\''+jsq(n)+'\')">✕</b></span>').join('');
+    return '<div style="border:1px solid rgba(216,169,78,.22);border-radius:10px;padding:9px;margin-bottom:10px">'
+      +'<div style="display:grid;grid-template-columns:118px 74px 72px 62px 1fr 32px;gap:6px;align-items:center">'
+        +'<input type="date" value="'+(r.date||'')+'" onchange="updateScheduleField('+i+',\'date\',this.value)">'
+        +'<input type="time" value="'+(r.time||'')+'" onchange="updateScheduleField('+i+',\'time\',this.value)">'
+        +'<select onchange="updateScheduleField('+i+',\'status\',this.value)">'
+          +'<option value="open"'+(st==='open'?' selected':'')+'>確定開</option>'
+          +'<option value="tentative"'+(st==='tentative'?' selected':'')+'>暫定</option>'
+          +'<option value="off"'+(st==='off'?' selected':'')+'>休息</option>'
+        +'</select>'
+        +'<input type="number" min="1" placeholder="將數" value="'+jv+'" onchange="updateScheduleField('+i+',\'jiang\',this.value)">'
+        +'<input type="text" placeholder="備註(選填),例:地點" value="'+nv+'" onchange="updateScheduleField('+i+',\'note\',this.value)">'
+        +'<button class="btn btn-outline" style="padding:6px 4px" title="刪除這天" onclick="removeScheduleRow('+i+')">✕</button>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">'
+        +'<span style="font-size:13px;color:rgba(246,241,227,.72)">🀄 報名 '+sus.length+'/4</span>'
+        +chips
+        +'<button style="background:transparent;border:1px dashed rgba(216,169,78,.6);color:var(--gold);padding:5px 10px;border-radius:10px;font-weight:800;cursor:pointer;font-family:inherit;font-size:13px" onclick="adminAddPlayer('+i+')">＋ 加玩家</button>'
+        +'<span style="flex:1"></span>'
+        +'<button style="background:#2E8B62;color:#fff;border:none;padding:8px 16px;border-radius:8px;font-weight:800;cursor:pointer;font-family:inherit" onclick="sendSignupCard('+i+')">確認發送到群組</button>'
+      +'</div>'
     +'</div>';
   }).join('');
+}
+function adminAddPlayer(idx){
+  const r=db.schedule&&db.schedule[idx];
+  if(!r||!r.date){alert('請先設定這天的日期');return;}
+  const raw=prompt('輸入要報名的玩家名字(一次一位):'); if(raw===null)return;
+  const nm=raw.trim(); if(!nm)return;
+  const names=daySignups(r.date);
+  if(names.length>=4){alert('這天已額滿(4/4)');return;}
+  if(names.some(n=>n===nm)){alert('「'+nm+'」已經報名這天了');return;}
+  names.push(nm);
+  if(fbRef)fbRef.child('signups/'+r.date).set(names);
+}
+function adminRemovePlayer(date,name){
+  if(!confirm('移除「'+name+'」在 '+date+' 的報名?'))return;
+  const names=daySignups(date).filter(n=>n!==name);
+  if(fbRef)fbRef.child('signups/'+date).set(names);
 }
 function sendSignupCard(idx){
   const r=db.schedule&&db.schedule[idx];
   if(!r||!r.date){alert('請先設定這天的日期');return;}
   const url='https://whistleformj-broadcast.github.io/mahjong/schedule.html?d='+r.date;
   const cnt=(daySignups(r.date)||[]).length;
-  const payload={card:{date:r.date,time:r.time||'',note:r.note||'',status:r.status||'open',count:cnt,url:url}};
+  const parts=[];
+  if(r.jiang)parts.push(r.jiang+'將');
+  if(r.note)parts.push(r.note);
+  const payload={card:{date:r.date,time:r.time||'',note:parts.join(' · '),status:r.status||'open',count:cnt,url:url}};
   try{
     fetch(LINE_NOTIFY_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
     if(typeof toast==='function')toast('📢 已發報名卡到群組'); else alert('已發報名卡到群組');
   }catch(e){alert('發送失敗');}
 }
+// 到開打時間自動刪除該場次(並移除報名);每 30 秒檢查一次
+function purgeExpiredSchedule(){
+  if(!fbReady||!db.schedule||!db.schedule.length)return;
+  const now=new Date();
+  const removed=[];
+  const kept=db.schedule.filter(r=>{
+    if(!r||!r.date)return true;
+    const tm=(r.time&&/^\d{1,2}:\d{2}$/.test(r.time))?r.time:'23:59';
+    const st=new Date(r.date+'T'+tm+':00');
+    if(!isNaN(st)&&st<=now){removed.push(r);return false;}
+    return true;
+  });
+  if(removed.length){
+    db.schedule=kept;save();
+    removed.forEach(r=>{ if(r&&r.date&&fbRef)fbRef.child('signups/'+r.date).remove(); });
+  }
+}
+setInterval(purgeExpiredSchedule,30000);
 function buildSlideSeq(){
   // 總累積榜:每 10 人一張,人數變多會自動增加頁數(無限翻頁)
   const per=10;

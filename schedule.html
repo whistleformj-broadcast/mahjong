@@ -48,6 +48,8 @@
   .add{display:block;width:100%;max-width:640px;margin:4px auto 0;font-size:16px;font-weight:900;padding:14px;
     border-radius:12px;border:1px dashed rgba(216,169,78,.6);background:rgba(216,169,78,.1);color:var(--gold);cursor:pointer;font-family:inherit}
   .empty{text-align:center;color:var(--muted);padding:30px 10px;font-size:15px}
+  .reminder{background:rgba(216,169,78,.16);border:2px solid var(--gold);color:var(--gold);font-size:20px;font-weight:900;text-align:center;padding:16px 12px;border-radius:14px;margin-bottom:14px;line-height:1.6}
+  .reminder b{color:#fff;background:var(--jade);padding:1px 8px;border-radius:6px}
   .foot{max-width:640px;margin:18px auto 0;font-size:12px;color:var(--muted);line-height:1.7;text-align:center}
   .savetip{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--jade);color:#fff;font-weight:800;
     font-size:14px;padding:10px 20px;border-radius:24px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:50;box-shadow:0 6px 20px rgba(0,0,0,.4)}
@@ -69,10 +71,11 @@
 <body>
   <div class="head">
     <h1>🀄 開播行程登記</h1>
-    <div class="sub">大家可以自己來登記哪天要來打牌!選日期、狀態,並把自己的名字加進當天陣容。<br>資料會即時同步到直播畫面的輪播。</div>
+    <div class="sub">點「我要報名」→ 輸入名字 → 按確認,就完成報名!<br>資料會即時同步到直播畫面。</div>
     <span id="badge">⚪ 連線中…</span>
   </div>
 
+  <div class="wrap"><div class="reminder">✍️ 輸入完名字後,請按「<b>確認</b>」<br>一次只報一個名字喔!</div></div>
   <div class="wrap" id="list"><div class="empty">載入中…</div></div>
   
 
