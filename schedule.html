@@ -26,6 +26,10 @@
   .row1{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
   input[type=date],input[type=time]{font-size:16px;font-weight:800;color:var(--ivory);background:rgba(0,0,0,.3);border:1px solid rgba(216,169,78,.4);border-radius:8px;padding:8px 10px;font-family:inherit}
   .wd{font-size:15px;font-weight:800;color:var(--gold)}
+  .date-ro{font-size:19px;font-weight:800;color:var(--ivory)}
+  .time-ro{font-size:18px;font-weight:900;color:var(--gold);margin-left:6px}
+  .badge-ro{margin-left:auto;font-size:14px;font-weight:900;color:#173d2b;padding:5px 14px;border-radius:16px;white-space:nowrap}
+  .note-ro{margin-top:10px;font-size:14px;color:var(--muted);line-height:1.5}
   .past-tag{font-size:11px;color:var(--muted);border:1px solid var(--muted);border-radius:10px;padding:1px 7px}
   .del{margin-left:auto;background:transparent;border:1px solid rgba(196,68,59,.6);color:#F0A79F;border-radius:8px;padding:7px 11px;font-size:14px;font-weight:700;cursor:pointer}
   .seg{display:flex;gap:6px;margin-bottom:10px}
@@ -48,6 +52,18 @@
   .savetip{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--jade);color:#fff;font-weight:800;
     font-size:14px;padding:10px 20px;border-radius:24px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:50;box-shadow:0 6px 20px rgba(0,0,0,.4)}
   .savetip.show{opacity:1}
+  /* 報名區 */
+  .prog{height:9px;background:rgba(255,255,255,.12);border-radius:6px;overflow:hidden;margin:6px 0 8px}
+  .prog-in{height:100%;background:#37D08A;border-radius:6px;transition:width .3s}
+  .signup-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .signup-chips .chip{display:inline-flex;align-items:center;gap:7px;background:rgba(55,208,138,.16);border:1px solid rgba(55,208,138,.5);color:#B8F0D6;font-size:15px;font-weight:700;padding:6px 11px;border-radius:16px}
+  .signup-chips .chip b{cursor:pointer;color:#F0A79F;font-weight:900;font-size:15px}
+  .signup-btn{width:100%;font-size:17px;font-weight:900;padding:13px;border-radius:11px;border:1px solid #37D08A;background:rgba(55,208,138,.16);color:#8FE3B5;cursor:pointer;font-family:inherit}
+  .full-tag{font-size:16px;font-weight:900;color:#E6B84A;text-align:center;padding:11px;background:rgba(230,184,74,.12);border-radius:10px}
+  .signup-in{display:flex;gap:8px}
+  .signup-in input{flex:1;font-size:16px;color:var(--ivory);background:rgba(0,0,0,.3);border:1px solid rgba(216,169,78,.45);border-radius:10px;padding:11px 12px;font-family:inherit}
+  .signup-in button{font-size:15px;font-weight:800;padding:11px 15px;border-radius:10px;border:none;background:#37D08A;color:#08301f;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .signup-in button.ghost{background:transparent;border:1px solid rgba(255,255,255,.25);color:var(--ivory)}
 </style>
 </head>
 <body>
@@ -58,7 +74,7 @@
   </div>
 
   <div class="wrap" id="list"><div class="empty">載入中…</div></div>
-  <button class="add" onclick="addDay()">＋ 新增一天</button>
+  
 
   <div class="foot">
     只會更新「開播行程」,不會影響任何計分資料。<br>
@@ -83,6 +99,9 @@ let schedRef=null, rosterRef=null;
 let schedule=[];      // 目前行程(隨 Firebase 即時更新)
 let roster=[];        // 玩家名冊(只讀,用來做快速加名字)
 let ready=false;
+let signupsRef=null, signups={}, signupOpen={};
+const MAX_SIGNUP=4;
+let savedName=localStorage.getItem('mj_signup_name')||'';
 
 function setBadge(t,c){const b=document.getElementById('badge');b.textContent=t;b.style.color=c||'';}
 function toISO(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -90,10 +109,35 @@ function asArray(v){return Array.isArray(v)?v:Object.values(v||{});}
 function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 /* 只寫 schedule 節點,永遠不碰計分資料 */
+/* ── 變動 → LINE 群組通知(防洗版:停 4 秒才發一則完整行程)── */
+const LINE_NOTIFY_URL='https://script.google.com/macros/s/AKfycbwOC5F1c8O-dvYCUxKaqOen0l97Yw8KI-buHk8v9HsBrtTbhCC4aIh0zuz5MoYamZeI/exec';
+function lineNotify(msg){try{fetch(LINE_NOTIFY_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({notify:msg})});}catch(e){}}
+function scheduleSummaryText(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const end=new Date(today);end.setDate(end.getDate()+21);
+  const wd=['日','一','二','三','四','五','六'];
+  const stMap={open:'✅確定開',tentative:'❓暫定',off:'😴休息'};
+  const items=(schedule||[]).filter(r=>r&&r.date)
+    .map(r=>({...r,d:new Date(r.date+'T00:00:00')}))
+    .filter(r=>!isNaN(r.d)&&r.d>=today&&r.d<=end)
+    .sort((a,b)=>a.d-b.d);
+  if(!items.length)return '📅 開播行程更新:近三週目前沒有安排';
+  return '📅 開播行程更新\n'+items.map(r=>{
+    const md=(r.d.getMonth()+1)+'/'+r.d.getDate()+'('+wd[r.d.getDay()]+')';
+    const tm=r.time?' '+r.time:'';
+    const st=stMap[r.status||'open']||'';
+    const names=dayNames(r.date);
+    const rep=(r.status==='off')?'':(names.length?' 報名'+names.length+'/'+MAX_SIGNUP+':'+names.join('、'):' 報名0/'+MAX_SIGNUP);
+    return '・'+md+tm+' '+st+rep;
+  }).join('\n');
+}
+let _nfTimer=null;
+function queueScheduleNotify(){clearTimeout(_nfTimer);_nfTimer=setTimeout(()=>lineNotify(scheduleSummaryText()),4000);}
 function writeSchedule(){
   if(!ready||!schedRef)return;
   schedule.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   schedRef.set(schedule).then(showSaved).catch(e=>setBadge('🔴 寫入失敗:'+e.code,'#F0A79F'));
+  queueScheduleNotify();
 }
 let saveTimer=null;
 function showSaved(){
@@ -126,44 +170,108 @@ function appendName(i,name){
 }
 
 const WD=['日','一','二','三','四','五','六'];
+function dayNames(date){const v=signups[date];return Array.isArray(v)?v.filter(Boolean):(v?Object.values(v).filter(Boolean):[]);}
+function openSignup(date){signupOpen[date]=true;render();const el=document.getElementById('su_'+date.replace(/-/g,''));if(el)el.focus();}
+function closeSignup(date){signupOpen[date]=false;render();}
+function confirmSignup(date){
+  const el=document.getElementById('su_'+date.replace(/-/g,''));
+  const name=(el?el.value:'').trim();
+  if(!name){alert('請先輸入你的名字');return;}
+  const names=dayNames(date);
+  if(names.length>=MAX_SIGNUP){alert('這天已經額滿囉');signupOpen[date]=false;render();return;}
+  if(names.some(n=>n===name)){alert('「'+name+'」已經報名這天了');return;}
+  names.push(name);
+  localStorage.setItem('mj_signup_name',name);savedName=name;
+  signupOpen[date]=false;
+  writeSignups(date,names,name,'signup');
+}
+function cancelSignup(date,name){
+  if(!confirm('取消「'+name+'」在這天的報名?'))return;
+  const names=dayNames(date).filter(n=>n!==name);
+  writeSignups(date,names,name,'cancel');
+}
+function writeSignups(date,names,name,action){
+  if(!ready||!signupsRef)return;
+  signupsRef.child(date).set(names).then(function(){
+    showSaved();
+    notifySignup(name,date,action,names.length,names.length>=MAX_SIGNUP);
+  }).catch(e=>setBadge('🔴 報名寫入失敗:'+e.code,'#F0A79F'));
+}
+function notifySignup(name,date,action,count,full){
+  const d=new Date(date+'T00:00:00');
+  const md=(d.getMonth()+1)+'/'+d.getDate()+'(週'+WD[d.getDay()]+')';
+  const msg=(action==='signup')
+    ? '🀄 '+name+' 報名 '+md+' ('+count+'/'+MAX_SIGNUP+')'+(full?' — 已額滿!':'')
+    : '↩️ '+name+' 取消報名 '+md+' ('+count+'/'+MAX_SIGNUP+')';
+  lineNotify(msg);
+}
 function render(){
   const el=document.getElementById('list');
-  if(!schedule.length){
-    el.innerHTML='<div class="empty">還沒有任何行程,按下面「＋ 新增一天」開始登記 🀄</div>';return;
-  }
   const today=new Date();today.setHours(0,0,0,0);
-  el.innerHTML=schedule.map((r,i)=>{
-    const d=r.date?new Date(r.date+'T00:00:00'):null;
-    const valid=d&&!isNaN(d);
-    const isPast=valid&&d<today;
-    const wd=valid?'(週'+WD[d.getDay()]+')':'';
+  const stMap={open:{t:'確定開',c:'#37D08A'},tentative:{t:'暫定',c:'#E6B84A'},off:{t:'休息',c:'#9AA0A6'}};
+  // 只顯示今天(含)以後的日子;牌咖不能改日期,只能報名/取消
+  const rows=schedule.map((r)=>r).filter(r=>{
+    const d=r&&r.date?new Date(r.date+'T00:00:00'):null;
+    return d&&!isNaN(d)&&d>=today;
+  }).sort((x,y)=>(x.date||'').localeCompare(y.date||''));
+  if(!rows.length){
+    el.innerHTML='<div class="empty">近期還沒有安排開播日,請等管理員新增 🀄</div>';return;
+  }
+  el.innerHTML=rows.map(r=>{
+    const d=new Date(r.date+'T00:00:00');
+    const wd='(週'+WD[d.getDay()]+')';
+    const md=(d.getMonth()+1)+'/'+d.getDate();
     const st=r.status||'open';
-    const noteNames=(r.note||'').split(/[、,，\s]+/).filter(Boolean);
-    const chips=roster.map(p=>{
-      const on=noteNames.includes(p.name);
-      return '<span class="chip" style="'+(on?'background:rgba(216,169,78,.35)':'')+'" onclick="appendName('+i+',\''+esc(p.name).replace(/'/g,"\\'")+'\')">'+(on?'✓ ':'')+esc(p.name)+'</span>';
-    }).join('');
-    return '<div class="card'+(isPast?' past':'')+'">'
+    const stt=stMap[st]||stMap.open;
+    let signupHtml='';
+    if(st!=='off'){
+      const names=dayNames(r.date);
+      const full=names.length>=MAX_SIGNUP;
+      const pct=Math.min(100,Math.round(names.length/MAX_SIGNUP*100));
+      const key=r.date.replace(/-/g,'');
+      const chips=names.map(n=>'<span class="chip">'+esc(n)+' <b onclick="cancelSignup(\''+r.date+'\',\''+esc(n).replace(/'/g,"\\'")+'\')">✕</b></span>').join('');
+      let action;
+      if(full) action='<div class="full-tag">✅ 已額滿 ('+MAX_SIGNUP+'/'+MAX_SIGNUP+')</div>';
+      else if(signupOpen[r.date]) action='<div class="signup-in"><input id="su_'+key+'" placeholder="輸入你的名字" value="'+esc(savedName)+'"><button onclick="confirmSignup(\''+r.date+'\')">確認</button><button class="ghost" onclick="closeSignup(\''+r.date+'\')">取消</button></div>';
+      else action='<button class="signup-btn" onclick="openSignup(\''+r.date+'\')">✋ 我要報名</button>';
+      signupHtml='<div class="notelab" style="margin-top:10px">報名 ('+names.length+'/'+MAX_SIGNUP+')</div>'
+        +'<div class="prog"><div class="prog-in" style="width:'+pct+'%"></div></div>'
+        +(chips?'<div class="signup-chips">'+chips+'</div>':'')
+        +action;
+    }
+    const timeRo=r.time?' <span class="time-ro">'+esc(r.time)+'</span>':'';
+    const noteRo=r.note?'<div class="note-ro">📌 '+esc(r.note)+'</div>':'';
+    return '<div class="card" data-date="'+r.date+'">'
       +'<div class="row1">'
-        +'<input type="date" value="'+(r.date||'')+'" onchange="setField('+i+',\'date\',this.value)">'
-        +'<input type="time" value="'+(r.time||'')+'" onchange="setField('+i+',\'time\',this.value)">'
-        +'<span class="wd">'+wd+'</span>'
-        +(isPast?'<span class="past-tag">已過</span>':'')
-        +'<button class="del" onclick="removeDay('+i+')">刪除</button>'
+        +'<span class="date-ro">'+md+' <span class="wd">'+wd+'</span>'+timeRo+'</span>'
+        +'<span class="badge-ro" style="background:'+stt.c+'">'+stt.t+'</span>'
       +'</div>'
-      +'<div class="seg">'
-        +'<button class="'+(st==='open'?'on open':'')+'" onclick="setStatus('+i+',\'open\')">確定開</button>'
-        +'<button class="'+(st==='tentative'?'on tentative':'')+'" onclick="setStatus('+i+',\'tentative\')">暫定</button>'
-        +'<button class="'+(st==='off'?'on off':'')+'" onclick="setStatus('+i+',\'off\')">休息</button>'
-      +'</div>'
-      +'<div class="notelab">當天陣容 / 備註</div>'
-      +'<textarea placeholder="例:哨子、里歐、珍" onchange="setField('+i+',\'note\',this.value)">'+esc(r.note||'')+'</textarea>'
-      +(roster.length?'<div class="notelab" style="margin-top:8px">點名字快速加入 / 移除自己:</div><div class="chips">'+chips+'</div>':'')
+      +signupHtml
+      +noteRo
     +'</div>';
   }).join('');
 }
 
 /* ===== 啟動 ===== */
+let TARGET_DATE=(new URLSearchParams(location.search)).get('d')||'';
+let _deeplinkDone=false;
+function tryDeeplink(){
+  if(!TARGET_DATE||_deeplinkDone)return;
+  const r=schedule.find(x=>x&&x.date===TARGET_DATE);
+  if(!r)return;  // 資料還沒到或沒這天
+  _deeplinkDone=true;
+  const today=new Date();today.setHours(0,0,0,0);
+  const d=new Date(TARGET_DATE+'T00:00:00');
+  const ok=!isNaN(d)&&d>=today&&(r.status||'open')!=='off'&&dayNames(TARGET_DATE).length<MAX_SIGNUP;
+  if(ok)signupOpen[TARGET_DATE]=true;
+  render();
+  setTimeout(function(){
+    const inp=document.getElementById('su_'+TARGET_DATE.replace(/-/g,''));
+    if(inp){inp.scrollIntoView({behavior:'smooth',block:'center'});inp.focus();return;}
+    const card=document.querySelector('[data-date="'+TARGET_DATE+'"]');
+    if(card)card.scrollIntoView({behavior:'smooth',block:'center'});
+  },250);
+}
 (function init(){
   if(typeof firebase==='undefined'||!firebase.initializeApp){
     setBadge('🔴 Firebase 載入失敗(網路或擴充功能擋住)','#F0A79F');return;
@@ -175,8 +283,10 @@ function render(){
     ready=true; setBadge('🟢 已連線,可以登記了','#8FE3B5');
     schedRef=firebase.database().ref('rooms/'+ROOM_ID+'/schedule');
     rosterRef=firebase.database().ref('rooms/'+ROOM_ID+'/roster');
-    schedRef.on('value',s=>{ schedule=asArray(s.val()); render(); });
+    schedRef.on('value',s=>{ schedule=asArray(s.val()); render(); tryDeeplink(); });
     rosterRef.on('value',s=>{ roster=asArray(s.val()).filter(p=>p&&p.name); render(); });
+    signupsRef=firebase.database().ref('rooms/'+ROOM_ID+'/signups');
+    signupsRef.on('value',s=>{ signups=s.val()||{}; render(); tryDeeplink(); });
   });
 })();
 </script>
