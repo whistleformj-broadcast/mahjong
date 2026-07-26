@@ -155,6 +155,7 @@ body.slideshow #cardsLayout{background:linear-gradient(to top,rgba(18,22,20,.96)
     .sch-wd{font-size:20px;font-weight:700;color:#8A8264;margin-left:5px}
     .sch-time{font-size:27px;font-weight:900;color:#2E8B62;margin-left:10px}
     .sch-cnt{font-size:20px;font-weight:900;color:#C4443B;background:#F3E9CF;padding:2px 10px;border-radius:12px;margin-right:6px}
+    .sch-memo{display:block;font-size:24px;font-weight:700;color:#9A968A;margin-top:5px}
     .sch-badge{font-size:20px;font-weight:900;color:#fff;padding:6px 15px;border-radius:22px;white-space:nowrap}
     .sch-note{font-size:24px;font-weight:800;color:#3F3B2E;flex:1;text-align:left;line-height:1.4}
 body.slideshow #cardsLayout .tiles{animation:slideIn .7s ease}
@@ -294,7 +295,7 @@ body.greenscreen .ov-foot{display:none}
 <div id="staleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#C0392B;color:#fff;text-align:center;padding:9px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⚠️ 這個畫面的版本過舊,分數可能不正確 — 請清除快取並重新整理(電腦 Ctrl+Shift+R、OBS 右鍵來源→重新整理快取)</div>
 
 <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0725-1646・b28行程一列一場</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0725-0226・b30備註放大</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
   <div class="tabs">
     <button id="tabControl" class="active" onclick="showView('control')">本場控制台</button>
@@ -1774,7 +1775,7 @@ function renderOverlay(){
           const cnt=sus.length;
           const nm=cnt?sus.map(esc).join('、'):'尚無人報名';
           const full=cnt>=4?'<span style="color:#37D08A"> ✅滿</span>':'';
-          note='<span class="sch-cnt">報名 '+cnt+'/4</span> '+nm+full+(r.note?' ・'+esc(r.note):'');
+          note='<span class="sch-cnt">報名 '+cnt+'/4</span> '+nm+full+(r.note?'<span class="sch-memo">'+esc(r.note)+'</span>':'');
         }
         return '<div class="sch-card'+(r.status==='off'?' off':'')+'">'
           +'<div class="sch-date">'+md+'<span class="sch-wd">('+wd[r.d.getDay()]+')</span>'+tm+'</div>'
@@ -1855,7 +1856,7 @@ function renderOverlay(){
     pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':nx.mode==='schedule'?'接下來三週行程':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=28;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=30;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
