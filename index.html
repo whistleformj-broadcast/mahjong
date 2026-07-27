@@ -295,7 +295,7 @@ body.greenscreen .ov-foot{display:none}
 <div id="staleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#C0392B;color:#fff;text-align:center;padding:9px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⚠️ 這個畫面的版本過舊,分數可能不正確 — 請清除快取並重新整理(電腦 Ctrl+Shift+R、OBS 右鍵來源→重新整理快取)</div>
 
 <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0725-0226・b30備註放大</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0727-2145・b32贊助推播全自動</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
   <div class="tabs">
     <button id="tabControl" class="active" onclick="showView('control')">本場控制台</button>
@@ -311,6 +311,13 @@ body.greenscreen .ov-foot{display:none}
   <div class="warn" id="setupWarn" style="display:none">
     ⚠️ <b>尚未設定 Firebase</b>,目前資料只存在這台裝置(localStorage 模式)。<br>
     設定方式:用文字編輯器打開這個 HTML 檔,找到最上方 <code>firebaseConfig</code> 區塊,貼上你 Firebase 專案的設定值後存檔即可。詳細步驟見檔案內註解。
+  </div>
+
+  <div class="panel" id="liveChatBindPanel">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <button class="btn" onclick="bindLiveChat()">🔍 檢查目前直播狀態(選用,贊助推播已自動運作)</button>
+      <span id="bindLiveChatStatus" style="font-size:13px;color:#8FD0FF;white-space:pre-line"></span>
+    </div>
   </div>
 
   <div class="panel" id="newSessionPanel">
@@ -1856,7 +1863,7 @@ function renderOverlay(){
     pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':nx.mode==='schedule'?'接下來三週行程':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=30;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=32;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
@@ -1968,6 +1975,23 @@ function scheduleUpcoming(){
   return (db.schedule||[]).some(r=>{if(!r||!r.date)return false;const d=new Date(r.date+'T00:00:00');return !isNaN(d)&&d>=today&&d<=end;});
 }
 function todayISO(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+/* ── 開播前綁定 YouTube 直播,供歐付寶贊助通知自動推播聊天室用(呼叫 Firebase Function) ── */
+const BIND_LIVECHAT_URL='https://asia-southeast1-live-mjbroadcast2026.cloudfunctions.net/bindLiveChat';
+async function bindLiveChat(){
+  const statusEl=document.getElementById('bindLiveChatStatus');
+  if(!statusEl) return;
+  statusEl.style.color='#8FD0FF';
+  statusEl.textContent='⏳ 綁定中…';
+  try{
+    const res=await fetch(BIND_LIVECHAT_URL);
+    const text=await res.text();
+    statusEl.textContent=text;
+    statusEl.style.color=text.startsWith('✅')?'#7CFF9E':'#FF8A8A';
+  }catch(e){
+    statusEl.style.color='#FF8A8A';
+    statusEl.textContent='❌ 綁定失敗,請確認網路連線('+e.message+')';
+  }
+}
 /* ── 開播行程 → LINE 群組通知(經 Apps Script 中繼;防洗版:停 4 秒才發一則完整行程)── */
 const LINE_NOTIFY_URL='https://script.google.com/macros/s/AKfycbwOC5F1c8O-dvYCUxKaqOen0l97Yw8KI-buHk8v9HsBrtTbhCC4aIh0zuz5MoYamZeI/exec';
 function lineNotify(msg){try{fetch(LINE_NOTIFY_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({notify:msg})});}catch(e){}}
