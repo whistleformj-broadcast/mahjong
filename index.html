@@ -295,14 +295,13 @@ body.greenscreen .ov-foot{display:none}
 <div id="staleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#C0392B;color:#fff;text-align:center;padding:9px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⚠️ 這個畫面的版本過舊,分數可能不正確 — 請清除快取並重新整理(電腦 Ctrl+Shift+R、OBS 右鍵來源→重新整理快取)</div>
 
 <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0812-1700・b33贊助紀錄分頁</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0725-1221・b33歸檔可清除</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
   <div class="tabs">
     <button id="tabControl" class="active" onclick="showView('control')">本場控制台</button>
     <button id="tabSchedule" onclick="showView('schedule')">開播行程</button>
     <button id="tabHistory" onclick="showView('history')">玩家與歷史</button>
     <button id="tabOverlay" onclick="showView('overlay')">直播畫面</button>
-    <button id="tabDonations" onclick="showView('donations')">💰贊助紀錄</button>
   </div>
 </div>
 
@@ -312,13 +311,6 @@ body.greenscreen .ov-foot{display:none}
   <div class="warn" id="setupWarn" style="display:none">
     ⚠️ <b>尚未設定 Firebase</b>,目前資料只存在這台裝置(localStorage 模式)。<br>
     設定方式:用文字編輯器打開這個 HTML 檔,找到最上方 <code>firebaseConfig</code> 區塊,貼上你 Firebase 專案的設定值後存檔即可。詳細步驟見檔案內註解。
-  </div>
-
-  <div class="panel" id="liveChatBindPanel">
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <button class="btn" onclick="bindLiveChat()">🔍 檢查目前直播狀態(選用,贊助推播已自動運作)</button>
-      <span id="bindLiveChatStatus" style="font-size:13px;color:#8FD0FF;white-space:pre-line"></span>
-    </div>
   </div>
 
   <div class="panel" id="newSessionPanel">
@@ -464,24 +456,6 @@ body.greenscreen .ov-foot{display:none}
   </div>
 </div>
 
-<!-- ═══════════ 贊助紀錄 ═══════════ -->
-<div id="donationsView" class="wrap" style="display:none">
-  <div class="panel">
-    <h2>💰 贊助紀錄</h2>
-    <div style="font-size:13px;color:rgba(246,241,227,.7);line-height:1.7;margin-bottom:14px">這裡讀取的是贊助 Webhook(歐付寶/綠界)自動寫入的紀錄,跟本場計分板是獨立的兩份資料,不會互相影響。</div>
-    <div id="donationsSummary" style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:14px;font-size:14px"></div>
-    <div class="btnrow" style="margin-bottom:10px">
-      <button class="btn btn-outline" onclick="exportDonationsCSV()">⬇️ 匯出 CSV</button>
-      <button class="btn btn-outline" onclick="loadDonations()">🔄 重新整理</button>
-    </div>
-    <table>
-      <thead><tr><th>時間</th><th>贊助者</th><th>金額</th><th>留言</th></tr></thead>
-      <tbody id="donationsBody"><tr><td colspan="4" style="text-align:center;color:rgba(246,241,227,.5)">載入中…</td></tr></tbody>
-    </table>
-  </div>
-</div>
-
-
 <!-- ═══════════ 玩家與歷史 ═══════════ -->
 <div id="historyView" class="wrap">
 
@@ -492,6 +466,21 @@ body.greenscreen .ov-foot{display:none}
       <input id="newPlayerName" placeholder="輸入新玩家名字" style="max-width:220px">
       <button class="btn btn-gold" onclick="addPlayer()">＋ 新增玩家</button>
     </div>
+  </div>
+
+  <div class="panel">
+    <h2>➕ 補登戰績</h2>
+    <div style="font-size:13px;color:rgba(246,241,227,.7);line-height:1.6;margin-bottom:10px">某場分數沒存到時,可在這裡手動補登。會同步到雲端並計入總名次。分數可為負(例 -50)。將數填 0 的話不會列入排行,建議填實際將數。<br>新增後會列在下方:按「<b>歸檔</b>」保留計分並收起該列;按「✕」則移除並扣回(補錯才用)。</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
+      <div><div style="font-size:11px;color:rgba(246,241,227,.6);margin-bottom:3px">玩家</div><select id="adjPlayer"></select></div>
+      <div><div style="font-size:11px;color:rgba(246,241,227,.6);margin-bottom:3px">將數</div><input type="number" id="adjJiang" value="0" style="width:70px"></div>
+      <div><div style="font-size:11px;color:rgba(246,241,227,.6);margin-bottom:3px">分數(±)</div><input type="number" id="adjScore" value="0" style="width:92px"></div>
+      <div><div style="font-size:11px;color:rgba(246,241,227,.6);margin-bottom:3px">自摸</div><input type="number" id="adjZimo" value="0" style="width:64px"></div>
+      <div><div style="font-size:11px;color:rgba(246,241,227,.6);margin-bottom:3px">胡牌</div><input type="number" id="adjHu" value="0" style="width:64px"></div>
+      <div><div style="font-size:11px;color:rgba(246,241,227,.6);margin-bottom:3px">放槍</div><input type="number" id="adjGun" value="0" style="width:64px"></div>
+      <button class="btn" onclick="addAdjustment()" style="padding:9px 16px">新增補登</button>
+    </div>
+    <div id="adjList" style="margin-top:12px"></div>
   </div>
 
   <div class="panel">
@@ -684,7 +673,9 @@ function normalize(d){
   d.fontSummary=+d.fontSummary||1;   // 計分表字級
   d.fontCards=+d.fontCards||1;       // 小卡字級
   d.schedule=Array.isArray(d.schedule)?d.schedule:Object.values(d.schedule||{});  // 開播行程
-  d.signups=(d.signups&&typeof d.signups==='object')?d.signups:{};              // 每日報名名單
+  d.signups=(d.signups&&typeof d.signups==='object')?d.signups:{};
+  d.adjustments=Array.isArray(d.adjustments)?d.adjustments:[];
+  d.baselines=(d.baselines&&typeof d.baselines==='object')?d.baselines:{};              // 手動補登戰績              // 每日報名名單
   d.roster=Array.isArray(d.roster)?d.roster:Object.values(d.roster||{});
   d.sessions=Array.isArray(d.sessions)?d.sessions:Object.values(d.sessions||{});
   d.sessions.forEach(s=>{
@@ -960,6 +951,8 @@ function lifetimeStats(){
     });
     jset.forEach(j=>{seatingForJiang(s,j).forEach(pid=>{if(m[pid])m[pid].jiangs++})});
   });
+  (db.adjustments||[]).forEach(a=>{if(a&&m[a.pid]){m[a.pid].score+=(+a.score||0);m[a.pid].jiangs+=(+a.jiangs||0);m[a.pid].zimo+=(+a.zimo||0);m[a.pid].ron+=(+a.hupai||0);m[a.pid].gun+=(+a.gun||0);}});
+  Object.keys(db.baselines||{}).forEach(pid=>{const b=db.baselines[pid];if(b&&m[pid]){m[pid].score+=(+b.score||0);m[pid].jiangs+=(+b.jiangs||0);m[pid].zimo+=(+b.zimo||0);m[pid].ron+=(+b.ron||0);m[pid].gun+=(+b.gun||0);}});
   return Object.values(m);
 }
 /* 玩家 → 歷史總累積排行名次(1 起) */
@@ -987,6 +980,8 @@ function lifetimeLeaderboard(){
     });
     jset.forEach(j=>{seatingForJiang(s,j).forEach(pid=>{if(m[pid])m[pid].jiangs++})});
   });
+  (db.adjustments||[]).forEach(a=>{if(a&&m[a.pid]){m[a.pid].score+=(+a.score||0);m[a.pid].jiangs+=(+a.jiangs||0);m[a.pid].zimo+=(+a.zimo||0);m[a.pid].ron+=(+a.hupai||0);m[a.pid].gun+=(+a.gun||0);}});
+  Object.keys(db.baselines||{}).forEach(pid=>{const b=db.baselines[pid];if(b&&m[pid]){m[pid].score+=(+b.score||0);m[pid].jiangs+=(+b.jiangs||0);m[pid].zimo+=(+b.zimo||0);m[pid].ron+=(+b.ron||0);m[pid].gun+=(+b.gun||0);}});
   return Object.values(m).filter(p=>p.jiangs>0);
 }
 
@@ -1368,6 +1363,7 @@ function render(){
   });
 
   renderScheduleEditor();
+  renderAdjustments();
   renderOverlay();
   checkStale();
 }
@@ -1975,61 +1971,9 @@ function showView(v){
   document.getElementById('scheduleView').style.display=v==='schedule'?'block':'none';
   document.getElementById('historyView').style.display=v==='history'?'block':'none';
   document.getElementById('overlayView').style.display=v==='overlay'?'block':'none';
-  document.getElementById('donationsView').style.display=v==='donations'?'block':'none';
-  ['Control','Schedule','History','Overlay','Donations'].forEach(n=>document.getElementById('tab'+n).classList.toggle('active',n.toLowerCase()===v));
+  ['Control','Schedule','History','Overlay'].forEach(n=>document.getElementById('tab'+n).classList.toggle('active',n.toLowerCase()===v));
   document.body.classList.toggle('ovview',v==='overlay');
   if(v!=='overlay'){document.body.classList.remove('greenscreen');stopSlideshow();}
-  if(v==='donations'&&!window._donationsLoaded){window._donationsLoaded=true;loadDonations();}
-}
-/* ── 贊助紀錄:讀取根目錄 /donations(跟本場計分板的 rooms/{ROOM_ID} 是不同路徑,獨立讀取)── */
-let _donationsCache=[];
-function loadDonations(){
-  const tbody=document.getElementById('donationsBody');
-  tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:rgba(246,241,227,.5)">載入中…</td></tr>';
-  try{
-    firebase.database().ref('donations').once('value').then(snap=>{
-      const val=snap.val()||{};
-      _donationsCache=Object.values(val).filter(Boolean).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
-      renderDonations();
-    }).catch(e=>{
-      tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:#E8837A">讀取失敗:'+((e&&e.message)||e)+'(可能是資料庫規則沒開放讀取 /donations)</td></tr>';
-    });
-  }catch(e){
-    tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:#E8837A">讀取失敗:'+((e&&e.message)||e)+'</td></tr>';
-  }
-}
-function renderDonations(){
-  const tbody=document.getElementById('donationsBody');
-  const summary=document.getElementById('donationsSummary');
-  if(!_donationsCache.length){
-    tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:rgba(246,241,227,.5)">目前還沒有贊助紀錄</td></tr>';
-    summary.innerHTML='';
-    return;
-  }
-  const total=_donationsCache.reduce((s,d)=>s+(+d.amount||0),0);
-  summary.innerHTML=
-    '<div>💰 累計金額:<b>'+total.toLocaleString()+' 元</b></div>'+
-    '<div>🧾 筆數:<b>'+_donationsCache.length+' 筆</b></div>';
-  tbody.innerHTML=_donationsCache.map(d=>{
-    const t=d.timestamp?new Date(d.timestamp).toLocaleString('zh-TW',{hour12:false}):'';
-    return '<tr><td>'+t+'</td><td>'+escHtml(d.name||'')+'</td><td>'+escHtml(String(d.amount||''))+' 元</td><td>'+escHtml(d.message||'')+'</td></tr>';
-  }).join('');
-}
-function escHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function exportDonationsCSV(){
-  if(!_donationsCache.length){toast&&toast('目前沒有資料可以匯出');return;}
-  const rows=[['時間','贊助者','金額','留言']];
-  _donationsCache.forEach(d=>{
-    const t=d.timestamp?new Date(d.timestamp).toLocaleString('zh-TW',{hour12:false}):'';
-    rows.push([t,d.name||'',d.amount||'',d.message||'']);
-  });
-  const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download='贊助紀錄_'+todayISO()+'.csv';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }
 /* ── 自動輪播(開播前 / 中場 / 選位子階段的螢幕保護)── */
 /* 是否停在『某將已打完、尚未指定下一將座位』的選位子階段 */
@@ -2046,23 +1990,6 @@ function scheduleUpcoming(){
   return (db.schedule||[]).some(r=>{if(!r||!r.date)return false;const d=new Date(r.date+'T00:00:00');return !isNaN(d)&&d>=today&&d<=end;});
 }
 function todayISO(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-/* ── 開播前綁定 YouTube 直播,供歐付寶贊助通知自動推播聊天室用(呼叫 Firebase Function) ── */
-const BIND_LIVECHAT_URL='https://asia-southeast1-live-mjbroadcast2026.cloudfunctions.net/bindLiveChat';
-async function bindLiveChat(){
-  const statusEl=document.getElementById('bindLiveChatStatus');
-  if(!statusEl) return;
-  statusEl.style.color='#8FD0FF';
-  statusEl.textContent='⏳ 綁定中…';
-  try{
-    const res=await fetch(BIND_LIVECHAT_URL);
-    const text=await res.text();
-    statusEl.textContent=text;
-    statusEl.style.color=text.startsWith('✅')?'#7CFF9E':'#FF8A8A';
-  }catch(e){
-    statusEl.style.color='#FF8A8A';
-    statusEl.textContent='❌ 綁定失敗,請確認網路連線('+e.message+')';
-  }
-}
 /* ── 開播行程 → LINE 群組通知(經 Apps Script 中繼;防洗版:停 4 秒才發一則完整行程)── */
 const LINE_NOTIFY_URL='https://script.google.com/macros/s/AKfycbwOC5F1c8O-dvYCUxKaqOen0l97Yw8KI-buHk8v9HsBrtTbhCC4aIh0zuz5MoYamZeI/exec';
 function lineNotify(msg){try{fetch(LINE_NOTIFY_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({notify:msg})});}catch(e){}}
@@ -2118,6 +2045,60 @@ function updateScheduleField(idx,field,val){
 function removeScheduleRow(idx){
   if(!db.schedule||idx<0||idx>=db.schedule.length)return;
   db.schedule.splice(idx,1);save();
+}
+function renderAdjustments(){
+  const sel=document.getElementById('adjPlayer');
+  if(sel){const cur=sel.value;sel.innerHTML=(db.roster||[]).map(p=>'<option value="'+p.id+'">'+(''+p.name).replace(/[<>]/g,'')+'</option>').join('');if(cur&&(db.roster||[]).some(p=>p.id===cur))sel.value=cur;}
+  const el=document.getElementById('adjList');if(!el)return;
+  const nameOf=pid=>{const p=(db.roster||[]).find(x=>x.id===pid);return p?(''+p.name).replace(/[<>]/g,''):'(已刪玩家)';};
+  const th='<thead><tr style="color:rgba(246,241,227,.6)"><th style="text-align:left">玩家</th><th>將</th><th>分數</th><th>自摸</th><th>胡</th><th>放槍</th><th></th></tr></thead>';
+  let html='';
+  const adj=db.adjustments||[];
+  if(adj.length){
+    html+='<div style="font-size:13px;color:rgba(246,241,227,.65);margin:4px 0 4px">待歸檔補登(尚未併入固定總計,可歸檔或扣回):</div>';
+    html+='<table style="width:100%;font-size:13px">'+th+'<tbody>'
+      +adj.map((a,i)=>'<tr><td style="text-align:left">'+nameOf(a.pid)+'</td><td style="text-align:center">'+(+a.jiangs||0)+'</td><td style="text-align:center">'+((+a.score||0)>0?'+':'')+(+a.score||0)+'</td><td style="text-align:center">'+(+a.zimo||0)+'</td><td style="text-align:center">'+(+a.hupai||0)+'</td><td style="text-align:center">'+(+a.gun||0)+'</td><td style="text-align:center;white-space:nowrap"><button class="btn" style="padding:3px 9px;background:#2E8B62;color:#fff" onclick="settleAdjustment('+i+')">歸檔</button> <button class="btn btn-outline" style="padding:3px 8px" title="補錯時用:移除並扣回" onclick="removeAdjustment('+i+')">✕</button></td></tr>').join('')
+      +'</tbody></table>';
+  }
+  const bl=db.baselines||{};
+  const blPids=Object.keys(bl).filter(pid=>{const b=bl[pid];return b&&((+b.score||0)||(+b.jiangs||0)||(+b.zimo||0)||(+b.ron||0)||(+b.gun||0));});
+  if(blPids.length){
+    html+='<div style="font-size:13px;color:var(--gold);font-weight:700;margin:14px 0 4px">已歸檔累計(★已併入總分,想改總分就清這裡):</div>';
+    html+='<table style="width:100%;font-size:13px">'+th+'<tbody>'
+      +blPids.map(pid=>{const b=bl[pid];return '<tr><td style="text-align:left">'+nameOf(pid)+'</td><td style="text-align:center">'+(+b.jiangs||0)+'</td><td style="text-align:center">'+((+b.score||0)>0?'+':'')+(+b.score||0)+'</td><td style="text-align:center">'+(+b.zimo||0)+'</td><td style="text-align:center">'+(+b.ron||0)+'</td><td style="text-align:center">'+(+b.gun||0)+'</td><td style="text-align:center"><button class="btn btn-outline" style="padding:3px 9px;color:#F0A79F;border-color:rgba(196,68,59,.6)" title="從總分移除這位的歸檔累計" onclick="clearBaseline(\''+pid+'\')">清除</button></td></tr>';}).join('')
+      +'</tbody></table>';
+  }
+  if(!html)html='<div style="font-size:13px;color:rgba(246,241,227,.5)">尚無補登紀錄。</div>';
+  el.innerHTML=html;
+}
+function clearBaseline(pid){
+  if(!db.baselines||!db.baselines[pid])return;
+  const nm=((db.roster||[]).find(x=>x.id===pid)||{}).name||'該玩家';
+  if(!confirm('清除「'+nm+'」的已歸檔累計?會從總分扣掉這些數字。'))return;
+  delete db.baselines[pid];save();
+}
+function addAdjustment(){
+  const selEl=document.getElementById('adjPlayer');const pid=selEl&&selEl.value;
+  if(!pid){alert('請先選玩家(名冊沒有的先在上面「玩家名冊」新增)');return;}
+  const g=id=>{const e=document.getElementById(id);return e?(+e.value||0):0;};
+  const a={id:'adj_'+Date.now(),pid:pid,jiangs:g('adjJiang'),score:g('adjScore'),zimo:g('adjZimo'),hupai:g('adjHu'),gun:g('adjGun'),ts:Date.now()};
+  if(!a.jiangs&&!a.score&&!a.zimo&&!a.hupai&&!a.gun){alert('請至少填一個數值');return;}
+  db.adjustments=db.adjustments||[];db.adjustments.push(a);save();
+  ['adjJiang','adjScore','adjZimo','adjHu','adjGun'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=0;});
+  if(typeof toast==='function')toast('✓ 已補登並同步'); else alert('已補登');
+}
+function removeAdjustment(idx){
+  if(!db.adjustments||!db.adjustments[idx])return;
+  if(!confirm('移除並「扣回」這筆分數?(補錯時才用)'))return;
+  db.adjustments.splice(idx,1);save();
+}
+function settleAdjustment(idx){
+  const a=db.adjustments&&db.adjustments[idx]; if(!a)return;
+  if(!confirm('歸檔這筆?分數會永久保留在總計,只是從下方清單移除。'))return;
+  db.baselines=db.baselines||{};
+  const b=db.baselines[a.pid]||(db.baselines[a.pid]={score:0,jiangs:0,zimo:0,ron:0,gun:0});
+  b.score+=(+a.score||0);b.jiangs+=(+a.jiangs||0);b.zimo+=(+a.zimo||0);b.ron+=(+a.hupai||0);b.gun+=(+a.gun||0);
+  db.adjustments.splice(idx,1);save();
 }
 function renderScheduleEditor(){
   const el=document.getElementById('scheduleList');if(!el)return;
