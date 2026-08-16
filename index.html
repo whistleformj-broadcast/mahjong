@@ -294,8 +294,9 @@ body.greenscreen .ov-foot{display:none}
 <body>
 <div id="staleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#C0392B;color:#fff;text-align:center;padding:9px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⚠️ 這個畫面的版本過舊,分數可能不正確 — 請清除快取並重新整理(電腦 Ctrl+Shift+R、OBS 右鍵來源→重新整理快取)</div>
 
-<div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0816-1518・b38防覆蓋同步</span></h1>
+<div id="idleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99998;background:#D8A94E;color:#1a1a1a;text-align:center;padding:10px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⏰ 已閒置 20 分鐘。若已打完請按「結束本場」;再閒置 10 分鐘會自動結束並歸檔。 <button class="btn" style="padding:4px 12px;margin:0 4px" onclick="endSession()">結束本場</button> <button class="btn btn-outline" style="padding:4px 12px" onclick="dismissIdle()">繼續打</button></div>
+  <div class="topbar">
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0816-1608・b40玩家改名</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
   <div class="tabs">
     <button id="tabControl" class="active" onclick="showView('control')">本場控制台</button>
@@ -507,6 +508,13 @@ body.greenscreen .ov-foot{display:none}
       <button class="btn" onclick="addAdjustment()" style="padding:9px 16px">新增補登</button>
     </div>
     <div id="adjList" style="margin-top:12px"></div>
+  </div>
+
+  <div class="panel">
+    <h2>🛟 雲端備份與還原</h2>
+    <div style="font-size:13px;color:rgba(246,241,227,.7);line-height:1.6;margin-bottom:10px">每記一把會自動備份一份到雲端(保留最近 20 份)。萬一資料出錯,可還原到某個時間點。還原會用該時間點覆蓋目前資料(還原前也會先自動備份現況)。</div>
+    <button class="btn btn-outline" onclick="renderBackups()" style="margin-bottom:10px">🔄 載入備份列表</button>
+    <div id="backupList" style="font-size:13px"></div>
   </div>
 
   <div class="panel">
@@ -808,7 +816,8 @@ function maybeRescale(){
   return true;
 }
 
-let _pushed=null;   // 上次已同步到雲端的狀態(用來只寫「這台改過的節點」,避免整包覆蓋)
+let _pushed=null;
+let lastActivity=Date.now(), idlePrompted=false;   // 上次已同步到雲端的狀態(用來只寫「這台改過的節點」,避免整包覆蓋)
 function buildSaveDiff(){
   const cur=JSON.parse(JSON.stringify(db));
   const prev=_pushed||{};
@@ -821,6 +830,7 @@ function buildSaveDiff(){
   return updates;
 }
 function save(){
+  lastActivity=Date.now(); if(idlePrompted){idlePrompted=false;hideIdleBanner();}
   db.build=Math.max(BUILD,+db.build||0);
   localStorage.setItem(KEY,JSON.stringify(db));
   if(fbRef&&!applyingRemote&&fbReady){
@@ -1046,6 +1056,14 @@ function removePlayer(id){
   if(used){toast('此玩家已有牌局紀錄,無法刪除');return}
   db.roster=db.roster.filter(p=>p.id!==id);save();
 }
+function renamePlayer(id){
+  const p=(db.roster||[]).find(x=>x.id===id); if(!p)return;
+  const nn=prompt('修改玩家名字:',p.name); if(nn===null)return;
+  const name=nn.trim(); if(!name){toast('名字不能空白');return;}
+  if(db.roster.some(x=>x.id!==id && x.name===name)){toast('已有同名玩家');return;}
+  p.name=name; save();
+  toast('✓ 已改名為 '+name);
+}
 
 /* ── 牌局 ── */
 function startSession(){
@@ -1108,13 +1126,15 @@ function confirmReseat(){
   save();updateForm();
   toast('✓ 第 '+curJ+' 將座位已設定,直播畫面切回實況');
 }
+function doEndSession(){ db.currentId=null; save(); }
 async function endSession(){
   const s=curSession();if(!s)return;
   const r=replay(s);
   let msg='結束本場?結果將歸檔進歷史戰績。';
   if(r.passes<16)msg='⚠️ 一將尚未完成(已過莊 '+r.passes+'/16 次)。<br>仍要結束本場嗎?';
   if(!await uiConfirm(msg,'結束並歸檔','再打幾把'))return;
-  db.currentId=null;save();
+  await backupNow('結束本場');
+  doEndSession();
   toast('✓ 本場已歸檔');
 }
 async function deleteSession(id){
@@ -1209,6 +1229,7 @@ function confirmHand(){
   cur={winner:null,type:null,gun:null};
   document.getElementById('tai').value=1;
   save();updateForm();flashOverlay();
+  backupNow('計分');
 }
 function undoHand(){
   const s=curSession();if(!s)return;
@@ -1268,6 +1289,7 @@ function recordMultiRon(){
   ['mrW0','mrW1','mrW2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   ['mrT0','mrT1','mrT2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=0;});
   save();updateForm();
+  backupNow('一炮多響');
   toast('已記錄一炮三響('+wins.length+' 家胡牌)');
 }
 
@@ -1300,7 +1322,7 @@ function render(){
   rl.innerHTML=db.roster.length?'':'<span style="color:var(--muted);font-size:13px">尚無玩家,請先新增</span>';
   db.roster.forEach(p=>{
     const c=document.createElement('span');c.className='chip';
-    c.innerHTML=`${p.name}<button title="刪除" onclick="removePlayer('${p.id}')">×</button>`;
+    c.innerHTML=`${p.name}<button title="改名" style="opacity:.75" onclick="renamePlayer('${p.id}')">✎</button><button title="刪除" onclick="removePlayer('${p.id}')">×</button>`;
     rl.appendChild(c);
   });
 
@@ -1930,7 +1952,7 @@ function renderOverlay(){
     pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':nx.mode==='schedule'?'接下來三週行程':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=38;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=40;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
@@ -2222,6 +2244,62 @@ function clearBaseline(pid){
   if(!confirm('清除「'+nm+'」的已歸檔累計?會從總分扣掉這些數字。'))return;
   delete db.baselines[pid];save();
 }
+async function backupNow(reason){
+  if(!fbReady||typeof firebase==='undefined')return;
+  try{
+    const ts=Date.now();
+    const snap={ts:ts,reason:reason||'',roster:db.roster||[],sessions:db.sessions||[],adjustments:db.adjustments||[],baselines:db.baselines||{},currentId:db.currentId||null,schedule:db.schedule||[],signups:db.signups||{}};
+    const bref=firebase.database().ref('mj_backups/'+ROOM_ID);
+    await bref.child(''+ts).set(snap);
+    const all=await bref.once('value');
+    const keys=Object.keys(all.val()||{}).sort();
+    for(let i=0;i<keys.length-20;i++){ bref.child(keys[i]).remove(); }
+  }catch(e){ console.error('backup failed',e); if(!window._bkWarned){window._bkWarned=1; if(typeof toast==='function')toast('⚠️ 備份寫入失敗(可能需開放 mj_backups 規則)'); } }
+}
+async function renderBackups(){
+  const el=document.getElementById('backupList'); if(!el)return;
+  el.innerHTML='讀取中…';
+  try{
+    const snap=await firebase.database().ref('mj_backups/'+ROOM_ID).once('value');
+    const val=snap.val()||{};
+    const keys=Object.keys(val).sort().reverse();
+    if(!keys.length){el.innerHTML='<div style="color:rgba(246,241,227,.5)">尚無備份。</div>';return;}
+    el.innerHTML='<table style="width:100%"><tbody>'+keys.map(k=>{
+      const b=val[k]||{}; const d=new Date(+k);
+      const p=n=>('0'+n).slice(-2);
+      const t=(d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
+      const ns=(b.sessions||[]).length; const rs=(''+(b.reason||'')).replace(/[<>]/g,'');
+      return '<tr><td style="text-align:left;padding:5px 0">'+t+' <span style="color:rgba(246,241,227,.5)">('+ns+'場・'+rs+')</span></td><td style="text-align:right"><button class="btn btn-outline" style="padding:3px 10px" onclick="restoreBackup(\''+k+'\')">還原</button></td></tr>';
+    }).join('')+'</tbody></table>';
+  }catch(e){ el.innerHTML='<div style="color:#F0A79F">讀取備份失敗:'+((e&&e.message)||e)+'</div>'; }
+}
+async function restoreBackup(k){
+  if(!await uiConfirm('還原到這個時間點?目前資料會被覆蓋。<br>(還原前會先自動備份目前現況)','還原','取消'))return;
+  try{
+    await backupNow('還原前現況');
+    const snap=await firebase.database().ref('mj_backups/'+ROOM_ID+'/'+k).once('value');
+    const b=snap.val(); if(!b){toast('找不到該備份');return;}
+    db.roster=b.roster||[]; db.sessions=b.sessions||[]; db.adjustments=b.adjustments||[];
+    db.baselines=b.baselines||{}; db.currentId=b.currentId||null; db.schedule=b.schedule||[]; db.signups=b.signups||{};
+    save();
+    toast('✓ 已還原到 '+new Date(+k).toLocaleString());
+  }catch(e){ toast('還原失敗:'+((e&&e.message)||e)); }
+}
+function showIdleBanner(){const el=document.getElementById('idleBanner');if(el)el.style.display='block';}
+function hideIdleBanner(){const el=document.getElementById('idleBanner');if(el)el.style.display='none';}
+function dismissIdle(){lastActivity=Date.now();idlePrompted=false;hideIdleBanner();}
+setInterval(function(){
+  if(!fbReady)return;
+  const s=curSession();
+  if(!s){ if(idlePrompted){idlePrompted=false;hideIdleBanner();} return; }
+  const idleMin=(Date.now()-lastActivity)/60000;
+  if(idleMin>=30 && idlePrompted){
+    backupNow('閒置自動結束'); doEndSession(); idlePrompted=false; hideIdleBanner();
+    if(typeof toast==='function')toast('⏰ 閒置逾30分,已自動結束本場並歸檔');
+  }else if(idleMin>=20 && !idlePrompted){
+    idlePrompted=true; backupNow('閒置20分'); showIdleBanner();
+  }
+},60000);
 function renderScheduleEditor(){
   const el=document.getElementById('scheduleList');if(!el)return;
   const sc=db.schedule||[];
