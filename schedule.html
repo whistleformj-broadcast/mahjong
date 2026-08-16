@@ -173,25 +173,39 @@ function appendName(i,name){
 }
 
 const WD=['日','一','二','三','四','五','六'];
-function dayNames(date){const v=signups[date];return Array.isArray(v)?v.filter(Boolean):(v?Object.values(v).filter(Boolean):[]);}
-function openSignup(date){signupOpen[date]=true;render();const el=document.getElementById('su_'+date.replace(/-/g,''));if(el)el.focus();}
-function closeSignup(date){signupOpen[date]=false;render();}
-function confirmSignup(date){
-  const el=document.getElementById('su_'+date.replace(/-/g,''));
+function skey(r){return (r&&(r.id||r.date))||'';}
+function sid(k){return 'su_'+(''+k).replace(/[^a-zA-Z0-9]/g,'');}
+function dayNames(key){const v=signups[key];return Array.isArray(v)?v.filter(Boolean):(v?Object.values(v).filter(Boolean):[]);}
+
+function writeSignups(key,date,names,name,action){
+  if(!ready||!signupsRef)return;
+  signupsRef.child(key).set(names).then(function(){
+    showSaved();
+    notifySignup(name,date,action,names.length,names.length>=MAX_SIGNUP);
+  }).catch(e=>setBadge('🔴 報名寫入失敗:'+e.code,'#F0A79F'));
+}
+
+function openSignup(key){signupOpen[key]=true;render();const el=document.getElementById(sid(key));if(el)el.focus();}
+
+function closeSignup(key){signupOpen[key]=false;render();}
+
+function confirmSignup(key,date){
+  const el=document.getElementById(sid(key));
   const name=(el?el.value:'').trim();
   if(!name){alert('請先輸入你的名字');return;}
-  const names=dayNames(date);
-  if(names.length>=MAX_SIGNUP){alert('這天已經額滿囉');signupOpen[date]=false;render();return;}
-  if(names.some(n=>n===name)){alert('「'+name+'」已經報名這天了');return;}
+  const names=dayNames(key);
+  if(names.length>=MAX_SIGNUP){alert('這場已經額滿囉');signupOpen[key]=false;render();return;}
+  if(names.some(n=>n===name)){alert('「'+name+'」已經報名這場了');return;}
   names.push(name);
   localStorage.setItem('mj_signup_name',name);savedName=name;
-  signupOpen[date]=false;
-  writeSignups(date,names,name,'signup');
+  signupOpen[key]=false;
+  writeSignups(key,date,names,name,'signup');
 }
-function cancelSignup(date,name){
-  if(!confirm('取消「'+name+'」在這天的報名?'))return;
-  const names=dayNames(date).filter(n=>n!==name);
-  writeSignups(date,names,name,'cancel');
+
+function cancelSignup(key,date,name){
+  if(!confirm('取消「'+name+'」的報名?'))return;
+  const names=dayNames(key).filter(n=>n!==name);
+  writeSignups(key,date,names,name,'cancel');
 }
 function writeSignups(date,names,name,action){
   if(!ready||!signupsRef)return;
@@ -228,15 +242,16 @@ function render(){
     const stt=stMap[st]||stMap.open;
     let signupHtml='';
     if(st!=='off'){
-      const names=dayNames(r.date);
+      const K=skey(r);
+      const names=dayNames(K);
       const full=names.length>=MAX_SIGNUP;
       const pct=Math.min(100,Math.round(names.length/MAX_SIGNUP*100));
-      const key=r.date.replace(/-/g,'');
-      const chips=names.map(n=>'<span class="chip">'+esc(n)+' <b onclick="cancelSignup(\''+r.date+'\',\''+esc(n).replace(/'/g,"\\'")+'\')">✕</b></span>').join('');
+      const idv=sid(K);
+      const chips=names.map(n=>'<span class="chip">'+esc(n)+' <b onclick="cancelSignup(\''+K+'\',\''+r.date+'\',\''+esc(n).replace(/'/g,"\\'")+'\')">✕</b></span>').join('');
       let action;
       if(full) action='<div class="full-tag">✅ 已額滿 ('+MAX_SIGNUP+'/'+MAX_SIGNUP+')</div>';
-      else if(signupOpen[r.date]) action='<div class="signup-in"><input id="su_'+key+'" placeholder="輸入你的名字" value="'+esc(savedName)+'"><button onclick="confirmSignup(\''+r.date+'\')">確認</button><button class="ghost" onclick="closeSignup(\''+r.date+'\')">取消</button></div>';
-      else action='<button class="signup-btn" onclick="openSignup(\''+r.date+'\')">✋ 我要報名</button>';
+      else if(signupOpen[K]) action='<div class="signup-in"><input id="'+idv+'" placeholder="輸入你的名字" value="'+esc(savedName)+'"><button onclick="confirmSignup(\''+K+'\',\''+r.date+'\')">確認</button><button class="ghost" onclick="closeSignup(\''+K+'\')">取消</button></div>';
+      else action='<button class="signup-btn" onclick="openSignup(\''+K+'\')">✋ 我要報名</button>';
       signupHtml='<div class="notelab" style="margin-top:10px">報名 ('+names.length+'/'+MAX_SIGNUP+')</div>'
         +'<div class="prog"><div class="prog-in" style="width:'+pct+'%"></div></div>'
         +(chips?'<div class="signup-chips">'+chips+'</div>':'')
@@ -244,7 +259,7 @@ function render(){
     }
     const timeRo=r.time?' <span class="time-ro">'+esc(r.time)+'</span>':'';
     const noteRo=r.note?'<div class="note-ro">📌 '+esc(r.note)+'</div>':'';
-    return '<div class="card" data-date="'+r.date+'">'
+    return '<div class="card" data-date="'+r.date+'" data-key="'+skey(r)+'">'
       +'<div class="row1">'
         +'<span class="date-ro">'+md+' <span class="wd">'+wd+'</span>'+timeRo+'</span>'
         +'<span class="badge-ro" style="background:'+stt.c+'">'+stt.t+'</span>'
@@ -256,22 +271,23 @@ function render(){
 }
 
 /* ===== 啟動 ===== */
-let TARGET_DATE=(new URLSearchParams(location.search)).get('d')||'';
+let TARGET_DATE=(new URLSearchParams(location.search)).get('s')||(new URLSearchParams(location.search)).get('d')||'';
 let _deeplinkDone=false;
 function tryDeeplink(){
   if(!TARGET_DATE||_deeplinkDone)return;
-  const r=schedule.find(x=>x&&x.date===TARGET_DATE);
-  if(!r)return;  // 資料還沒到或沒這天
+  const r=schedule.find(x=>x&&(skey(x)===TARGET_DATE||x.date===TARGET_DATE));
+  if(!r)return;  // 資料還沒到或沒這場
   _deeplinkDone=true;
+  const K=skey(r);
   const today=new Date();today.setHours(0,0,0,0);
-  const d=new Date(TARGET_DATE+'T00:00:00');
-  const ok=!isNaN(d)&&d>=today&&(r.status||'open')!=='off'&&dayNames(TARGET_DATE).length<MAX_SIGNUP;
-  if(ok)signupOpen[TARGET_DATE]=true;
+  const d=new Date(r.date+'T00:00:00');
+  const ok=!isNaN(d)&&d>=today&&(r.status||'open')!=='off'&&dayNames(K).length<MAX_SIGNUP;
+  if(ok)signupOpen[K]=true;
   render();
   setTimeout(function(){
-    const inp=document.getElementById('su_'+TARGET_DATE.replace(/-/g,''));
+    const inp=document.getElementById(sid(K));
     if(inp){inp.scrollIntoView({behavior:'smooth',block:'center'});inp.focus();return;}
-    const card=document.querySelector('[data-date="'+TARGET_DATE+'"]');
+    const card=document.querySelector('[data-key="'+K+'"]');
     if(card)card.scrollIntoView({behavior:'smooth',block:'center'});
   },250);
 }

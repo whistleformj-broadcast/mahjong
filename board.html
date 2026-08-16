@@ -60,6 +60,7 @@ const ST={open:{t:'確定開',c:'#37D08A'},tentative:{t:'暫定',c:'#E6B84A'},of
 let schedule=[], signups={};
 function asArray(v){return Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean);}
 function esc(s){return (''+(s||'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function skey(r){return (r&&(r.id||r.date))||'';}
 function daySignups(date){const v=signups[date];return Array.isArray(v)?v.filter(Boolean):(v?Object.values(v).filter(Boolean):[]);}
 
 function render(){
@@ -84,7 +85,7 @@ function render(){
     if(st==='off'){
       rosterHtml='<div class="roster" style="color:#9A968A">今天休息</div>';
     }else{
-      const sus=daySignups(r.date);
+      const sus=daySignups(skey(r));
       const full=sus.length>=4?'<span class="full"> ✅滿</span>':'';
       const nm=sus.length?sus.map(esc).join('、'):'尚無人報名';
       const memo=r.note?'<span class="memo">'+esc(r.note)+'</span>':'';
