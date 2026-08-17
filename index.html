@@ -296,8 +296,9 @@ body.greenscreen .ov-foot{display:none}
 
 <div id="idleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99998;background:#D8A94E;color:#1a1a1a;text-align:center;padding:10px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⏰ 已閒置 20 分鐘。若已打完請按「結束本場」;再閒置 10 分鐘會自動結束並歸檔。 <button class="btn" style="padding:4px 12px;margin:0 4px" onclick="endSession()">結束本場</button> <button class="btn btn-outline" style="padding:4px 12px" onclick="dismissIdle()">繼續打</button></div>
   <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0816-1608・b40玩家改名</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0817-0913・b43手動備份</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
+  <span id="lastWriteInfo" style="font-size:11px;color:rgba(246,241,227,.5);margin-left:8px"></span>
   <div class="tabs">
     <button id="tabControl" class="active" onclick="showView('control')">本場控制台</button>
     <button id="tabSchedule" onclick="showView('schedule')">開播行程</button>
@@ -513,7 +514,8 @@ body.greenscreen .ov-foot{display:none}
   <div class="panel">
     <h2>🛟 雲端備份與還原</h2>
     <div style="font-size:13px;color:rgba(246,241,227,.7);line-height:1.6;margin-bottom:10px">每記一把會自動備份一份到雲端(保留最近 20 份)。萬一資料出錯,可還原到某個時間點。還原會用該時間點覆蓋目前資料(還原前也會先自動備份現況)。</div>
-    <button class="btn btn-outline" onclick="renderBackups()" style="margin-bottom:10px">🔄 載入備份列表</button>
+    <button class="btn" onclick="forceBackup()" style="margin-bottom:10px;background:#2E8B62;color:#fff">📌 強制存一筆備份</button>
+    <button class="btn btn-outline" onclick="renderBackups()" style="margin-bottom:10px;margin-left:6px">🔄 載入備份列表</button>
     <div id="backupList" style="font-size:13px"></div>
   </div>
 
@@ -663,6 +665,7 @@ const ROOM_ID = "howard-mj-room-2026";
 /* ═══════════════════════════════════════════════════════════════ */
 
 const KEY='mj_league_v2';
+let DEVICE_ID=(function(){try{let d=localStorage.getItem('mj_device');if(!d){d=(Math.random().toString(36).slice(2,6)).toUpperCase();localStorage.setItem('mj_device',d);}return d;}catch(e){return '????';}})();
 const WINDS=['東','南','西','北'];
 let db={roster:[],sessions:[],currentId:null};
 let cur={winner:null,type:null,gun:null};
@@ -784,6 +787,7 @@ function initStore(){
       fbRef.on('value',snap=>{
         fbReady=true;
         applyingRemote=true;
+        _cloudBuild=+((snap.val()||{}).build||0);
         db=normalize(snap.val());
         applyingRemote=false;
         _pushed=JSON.parse(JSON.stringify(db));   // 與雲端同步的基準
@@ -817,6 +821,7 @@ function maybeRescale(){
 }
 
 let _pushed=null;
+let _cloudBuild=0;
 let lastActivity=Date.now(), idlePrompted=false;   // 上次已同步到雲端的狀態(用來只寫「這台改過的節點」,避免整包覆蓋)
 function buildSaveDiff(){
   const cur=JSON.parse(JSON.stringify(db));
@@ -833,16 +838,22 @@ function save(){
   lastActivity=Date.now(); if(idlePrompted){idlePrompted=false;hideIdleBanner();}
   db.build=Math.max(BUILD,+db.build||0);
   localStorage.setItem(KEY,JSON.stringify(db));
+  if(_cloudBuild>BUILD){   // 我是舊版:雲端已被更新版寫過 → 禁止寫入,避免覆蓋大家的資料
+    setBadge('🔴 版本過舊,已停止上傳以防覆蓋,請重新整理','#E8837A');
+    const sb=document.getElementById('staleBanner'); if(sb)sb.style.display='block';
+    render(); return;
+  }
   if(fbRef&&!applyingRemote&&fbReady){
     try{
       const updates=buildSaveDiff();
       if(Object.keys(updates).length){
+        updates.lastWrite={b:BUILD,d:DEVICE_ID,t:Date.now()};
         fbRef.update(updates).then(()=>{ _pushed=JSON.parse(JSON.stringify(db)); }).catch(e=>{
           setBadge('🔴 寫入失敗,資料暫存本機','#E8837A');console.error(e);
         });
       }
-    }catch(err){ // 保底:diff 出錯就整包寫
-      fbRef.set(JSON.parse(JSON.stringify(db))).then(()=>{_pushed=JSON.parse(JSON.stringify(db));}).catch(e=>{setBadge('🔴 寫入失敗,資料暫存本機','#E8837A');console.error(e);});
+    }catch(err){ // 差異比對出錯:只留本機、不整包覆蓋(避免蓋掉別台)
+      setBadge('🔴 存檔異常,已暫存本機(未上傳,避免覆蓋)','#E8837A');console.error(err);
     }
   }
   render();
@@ -1432,6 +1443,7 @@ function render(){
 
   renderScheduleEditor();
   renderAdjustments();
+  updateLastWriteInfo();
   renderOverlay();
   checkStale();
 }
@@ -1952,7 +1964,7 @@ function renderOverlay(){
     pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':nx.mode==='schedule'?'接下來三週行程':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=40;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=43;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
@@ -2244,17 +2256,29 @@ function clearBaseline(pid){
   if(!confirm('清除「'+nm+'」的已歸檔累計?會從總分扣掉這些數字。'))return;
   delete db.baselines[pid];save();
 }
-async function backupNow(reason){
-  if(!fbReady||typeof firebase==='undefined')return;
+async function backupNow(reason,pinned){
+  if(!fbReady||typeof firebase==='undefined')return false;
   try{
     const ts=Date.now();
-    const snap={ts:ts,reason:reason||'',roster:db.roster||[],sessions:db.sessions||[],adjustments:db.adjustments||[],baselines:db.baselines||{},currentId:db.currentId||null,schedule:db.schedule||[],signups:db.signups||{}};
+    const snap={ts:ts,reason:reason||'',pinned:!!pinned,roster:db.roster||[],sessions:db.sessions||[],adjustments:db.adjustments||[],baselines:db.baselines||{},currentId:db.currentId||null,schedule:db.schedule||[],signups:db.signups||{}};
     const bref=firebase.database().ref('mj_backups/'+ROOM_ID);
     await bref.child(''+ts).set(snap);
     const all=await bref.once('value');
-    const keys=Object.keys(all.val()||{}).sort();
-    for(let i=0;i<keys.length-20;i++){ bref.child(keys[i]).remove(); }
-  }catch(e){ console.error('backup failed',e); if(!window._bkWarned){window._bkWarned=1; if(typeof toast==='function')toast('⚠️ 備份寫入失敗(可能需開放 mj_backups 規則)'); } }
+    const val=all.val()||{};
+    const autoKeys=Object.keys(val).filter(k=>!(val[k]&&val[k].pinned)).sort();  // 只清非釘選
+    for(let i=0;i<autoKeys.length-20;i++){ bref.child(autoKeys[i]).remove(); }
+    return true;
+  }catch(e){ console.error('backup failed',e); if(!window._bkWarned){window._bkWarned=1; if(typeof toast==='function')toast('⚠️ 備份寫入失敗(可能需開放 mj_backups 規則)'); } return false; }
+}
+async function forceBackup(){
+  if(!fbReady){toast('尚未連線,無法備份');return;}
+  toast('備份中…');
+  const ok=await backupNow('📌 手動備份',true);
+  if(ok){toast('✓ 已強制存一筆(釘選,不會被自動清除)'); renderBackups();}
+}
+async function deleteBackup(k){
+  if(!await uiConfirm('刪除這筆備份?','刪除','取消'))return;
+  try{ await firebase.database().ref('mj_backups/'+ROOM_ID+'/'+k).remove(); renderBackups(); }catch(e){ toast('刪除失敗'); }
 }
 async function renderBackups(){
   const el=document.getElementById('backupList'); if(!el)return;
@@ -2269,7 +2293,9 @@ async function renderBackups(){
       const p=n=>('0'+n).slice(-2);
       const t=(d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
       const ns=(b.sessions||[]).length; const rs=(''+(b.reason||'')).replace(/[<>]/g,'');
-      return '<tr><td style="text-align:left;padding:5px 0">'+t+' <span style="color:rgba(246,241,227,.5)">('+ns+'場・'+rs+')</span></td><td style="text-align:right"><button class="btn btn-outline" style="padding:3px 10px" onclick="restoreBackup(\''+k+'\')">還原</button></td></tr>';
+      const pin=b.pinned?'<span style="color:var(--gold)">📌</span> ':'';
+      const delBtn=b.pinned?' <button class="btn btn-outline" style="padding:3px 8px;color:#F0A79F;border-color:rgba(196,68,59,.5)" onclick="deleteBackup(\''+k+'\')">刪</button>':'';
+      return '<tr><td style="text-align:left;padding:5px 0">'+pin+t+' <span style="color:rgba(246,241,227,.5)">('+ns+'場・'+rs+')</span></td><td style="text-align:right;white-space:nowrap"><button class="btn btn-outline" style="padding:3px 10px" onclick="restoreBackup(\''+k+'\')">還原</button>'+delBtn+'</td></tr>';
     }).join('')+'</tbody></table>';
   }catch(e){ el.innerHTML='<div style="color:#F0A79F">讀取備份失敗:'+((e&&e.message)||e)+'</div>'; }
 }
@@ -2300,6 +2326,15 @@ setInterval(function(){
     idlePrompted=true; backupNow('閒置20分'); showIdleBanner();
   }
 },60000);
+function updateLastWriteInfo(){
+  const el=document.getElementById('lastWriteInfo');if(!el)return;
+  const lw=db&&db.lastWrite;
+  if(!lw){el.textContent='本機:'+DEVICE_ID+' · b'+BUILD;return;}
+  const d=new Date(+lw.t||0);const p=n=>('0'+n).slice(-2);
+  const stale=(+lw.b||0)!==BUILD?' ⚠版本不一致':'';
+  el.textContent='最後寫入:b'+(lw.b||'?')+'·'+(lw.d||'?')+'·'+p(d.getHours())+':'+p(d.getMinutes())+' (我:'+DEVICE_ID+'/b'+BUILD+')'+stale;
+  el.style.color=stale?'#F0A79F':'rgba(246,241,227,.5)';
+}
 function renderScheduleEditor(){
   const el=document.getElementById('scheduleList');if(!el)return;
   const sc=db.schedule||[];
