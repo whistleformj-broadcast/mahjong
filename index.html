@@ -296,7 +296,7 @@ body.greenscreen .ov-foot{display:none}
 
 <div id="idleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99998;background:#D8A94E;color:#1a1a1a;text-align:center;padding:10px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⏰ 已閒置 20 分鐘。若已打完請按「結束本場」;再閒置 10 分鐘會自動結束並歸檔。 <button class="btn" style="padding:4px 12px;margin:0 4px" onclick="endSession()">結束本場</button> <button class="btn btn-outline" style="padding:4px 12px" onclick="dismissIdle()">繼續打</button></div>
   <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0817-0913・b43手動備份</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0818-1737・b45報名防呆</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
   <span id="lastWriteInfo" style="font-size:11px;color:rgba(246,241,227,.5);margin-left:8px"></span>
   <div class="tabs">
@@ -791,6 +791,7 @@ function initStore(){
         db=normalize(snap.val());
         applyingRemote=false;
         _pushed=JSON.parse(JSON.stringify(db));   // 與雲端同步的基準
+        lastActivity=Date.now(); if(idlePrompted){idlePrompted=false;hideIdleBanner();}  // 別台在記=有活動,重設閒置
         if(typeof _schedSnap!=='undefined'&&_schedSnap===null)_schedSnap=schedMapNow();
         localStorage.setItem(KEY,JSON.stringify(db));
         if(maybeRescale()){save();toast&&toast('✓ 分數已換算為底5/台1');}
@@ -1964,7 +1965,7 @@ function renderOverlay(){
     pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':nx.mode==='schedule'?'接下來三週行程':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=43;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=45;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
@@ -2122,7 +2123,8 @@ function awaitingSeating(s){
   return !seatingList(s).some(x=>(x.jiang||1)===curJ); // 第1將開局已指定
 }
 function skey(r){return (r&&(r.id||r.date))||'';}
-function daySignups(date){const v=(db.signups||{})[date];return Array.isArray(v)?v.filter(Boolean):(v?Object.values(v).filter(Boolean):[]);}
+function okName(n){n=(''+n).trim();if(!n)return false;if(n==='-')return false;if(/^[0-9]$/.test(n))return false;return true;}
+function daySignups(date){const v=(db.signups||{})[date];const arr=Array.isArray(v)?v:(v?Object.values(v):[]);return arr.filter(okName);}
 function scheduleUpcoming(){
   const today=new Date();today.setHours(0,0,0,0);
   const end=new Date(today);end.setDate(end.getDate()+21);
@@ -2316,6 +2318,7 @@ function hideIdleBanner(){const el=document.getElementById('idleBanner');if(el)e
 function dismissIdle(){lastActivity=Date.now();idlePrompted=false;hideIdleBanner();}
 setInterval(function(){
   if(!fbReady)return;
+  if(document.body.classList.contains('outputmode')){hideIdleBanner();return;}  // 直播/overlay 畫面不做閒置提醒與自動結束
   const s=curSession();
   if(!s){ if(idlePrompted){idlePrompted=false;hideIdleBanner();} return; }
   const idleMin=(Date.now()-lastActivity)/60000;

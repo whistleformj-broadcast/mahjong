@@ -70,7 +70,7 @@
 </head>
 <body>
   <div class="head">
-    <h1>🀄 開播行程登記</h1>
+    <h1>🀄 開播行程登記 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">schedule v0818-1736</span></h1>
     <div class="sub">點「我要報名」→ 輸入名字 → 按確認,就完成報名!<br>資料會即時同步到直播畫面。</div>
     <span id="badge">⚪ 連線中…</span>
   </div>
@@ -96,7 +96,7 @@ const firebaseConfig = {
   messagingSenderId: "993789032431",
   appId: "1:993789032431:web:41480070253c3c2cf5281a"
 };
-const ROOM_ID = "howard-mj-room-2026";
+const ROOM_ID = "howard-mj-room-2026b";
 
 let schedRef=null, rosterRef=null;
 let schedule=[];      // 目前行程(隨 Firebase 即時更新)
@@ -175,7 +175,8 @@ function appendName(i,name){
 const WD=['日','一','二','三','四','五','六'];
 function skey(r){return (r&&(r.id||r.date))||'';}
 function sid(k){return 'su_'+(''+k).replace(/[^a-zA-Z0-9]/g,'');}
-function dayNames(key){const v=signups[key];return Array.isArray(v)?v.filter(Boolean):(v?Object.values(v).filter(Boolean):[]);}
+function okName(n){n=(''+n).trim();if(!n)return false;if(n==='-')return false;if(/^[0-9]$/.test(n))return false;return true;}
+function dayNames(key){const v=signups[key];const arr=Array.isArray(v)?v:(v?Object.values(v):[]);return arr.filter(okName);}
 
 function writeSignups(key,date,names,name,action){
   if(!ready||!signupsRef)return;
@@ -193,6 +194,7 @@ function confirmSignup(key,date){
   const el=document.getElementById(sid(key));
   const name=(el?el.value:'').trim();
   if(!name){alert('請先輸入你的名字');return;}
+  if(!okName(name)){alert('名字格式不正確,請輸入完整名字');return;}
   const names=dayNames(key);
   if(names.length>=MAX_SIGNUP){alert('這場已經額滿囉');signupOpen[key]=false;render();return;}
   if(names.some(n=>n===name)){alert('「'+name+'」已經報名這場了');return;}
@@ -215,11 +217,13 @@ function writeSignups(date,names,name,action){
   }).catch(e=>setBadge('🔴 報名寫入失敗:'+e.code,'#F0A79F'));
 }
 function notifySignup(name,date,action,count,full){
+  name=(''+(name==null?'':name)).trim();
   const d=new Date(date+'T00:00:00');
-  const md=(d.getMonth()+1)+'/'+d.getDate()+'(週'+WD[d.getDay()]+')';
+  const md=isNaN(d.getTime())?(''+(date==null?'':date)):((d.getMonth()+1)+'/'+d.getDate()+'(週'+WD[d.getDay()]+')');
+  const c=Math.max(0,+count||0);
   const msg=(action==='signup')
-    ? '🀄 '+name+' 報名 '+md+' ('+count+'/'+MAX_SIGNUP+')'+(full?' — 已額滿!':'')
-    : '↩️ '+name+' 取消報名 '+md+' ('+count+'/'+MAX_SIGNUP+')';
+    ? '🀄 '+name+' 報名 '+md+' ('+c+'/'+MAX_SIGNUP+')'+(full?' — 已額滿!':'')
+    : '↩️ '+name+' 取消報名 '+md+' ('+c+'/'+MAX_SIGNUP+')';
   lineNotify(msg);
 }
 function render(){
