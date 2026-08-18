@@ -70,7 +70,7 @@
 </head>
 <body>
   <div class="head">
-    <h1>🀄 開播行程登記 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">schedule v0818-1736</span></h1>
+    <h1>🀄 開播行程登記 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">schedule v0818-0052</span></h1>
     <div class="sub">點「我要報名」→ 輸入名字 → 按確認,就完成報名!<br>資料會即時同步到直播畫面。</div>
     <span id="badge">⚪ 連線中…</span>
   </div>
@@ -96,7 +96,7 @@ const firebaseConfig = {
   messagingSenderId: "993789032431",
   appId: "1:993789032431:web:41480070253c3c2cf5281a"
 };
-const ROOM_ID = "howard-mj-room-2026b";
+const ROOM_ID = "howard-mj-room-2026";
 
 let schedRef=null, rosterRef=null;
 let schedule=[];      // 目前行程(隨 Firebase 即時更新)
@@ -208,13 +208,6 @@ function cancelSignup(key,date,name){
   if(!confirm('取消「'+name+'」的報名?'))return;
   const names=dayNames(key).filter(n=>n!==name);
   writeSignups(key,date,names,name,'cancel');
-}
-function writeSignups(date,names,name,action){
-  if(!ready||!signupsRef)return;
-  signupsRef.child(date).set(names).then(function(){
-    showSaved();
-    notifySignup(name,date,action,names.length,names.length>=MAX_SIGNUP);
-  }).catch(e=>setBadge('🔴 報名寫入失敗:'+e.code,'#F0A79F'));
 }
 function notifySignup(name,date,action,count,full){
   name=(''+(name==null?'':name)).trim();
