@@ -3,20 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>🀄 哨子麻將村 · 開播行程</title>
-<!-- 純瀏覽頁:只「讀取」Firebase 的 schedule / signups,不會寫入任何資料 -->
+<title>🀄 哨子麻將村 · 開播行程 / 戰績</title>
+<!-- 純瀏覽頁:只「讀取」Firebase,不會寫入任何資料 -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
-  :root{ --felt:#0f5132; --felt2:#0b3d26; --gold:#D8A94E; --ivory:#F6F1E3; --jade:#2E8B62; --red:#C4443B; --muted:rgba(246,241,227,.6); }
+  :root{ --felt:#0f5132; --felt2:#0b3d26; --gold:#D8A94E; --ivory:#F6F1E3; --jade:#2E8B62; --red:#C4443B; --green:#1D9E63; --muted:rgba(246,241,227,.6); }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{margin:0;font-family:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
     background:linear-gradient(160deg,var(--felt),var(--felt2));color:var(--ivory);min-height:100vh;padding:18px 14px 50px}
-  .head{max-width:720px;margin:0 auto 18px;text-align:center}
+  .head{max-width:720px;margin:0 auto 14px;text-align:center}
   h1{font-size:26px;margin:0 0 4px;letter-spacing:3px;color:var(--gold);font-weight:900}
   .sub{font-size:14px;color:var(--muted);letter-spacing:1px}
   #badge{display:inline-block;font-size:12px;font-weight:700;margin-top:8px;padding:3px 10px;border-radius:20px;background:rgba(0,0,0,.25)}
+  .tabs{max-width:720px;margin:0 auto 16px;display:flex;gap:8px}
+  .tab{flex:1;padding:11px 8px;border:none;border-radius:12px;font-size:16px;font-weight:900;letter-spacing:1px;cursor:pointer;
+    background:rgba(0,0,0,.25);color:var(--muted);font-family:inherit}
+  .tab.active{background:var(--gold);color:#22201A}
   .wrap{max-width:720px;margin:0 auto}
   .card{background:var(--ivory);border-radius:16px;padding:16px 20px;margin-bottom:14px;box-shadow:0 6px 18px rgba(0,0,0,.28)}
   .card.off{opacity:.7}
@@ -32,16 +36,32 @@
   .memo{display:block;font-size:20px;font-weight:700;color:#9A968A;margin-top:6px}
   .empty{text-align:center;color:var(--muted);padding:40px 10px;font-size:16px}
   .foot{max-width:720px;margin:20px auto 0;text-align:center;font-size:12px;color:var(--muted)}
+  /* 戰績大表 */
+  .stcard{background:var(--ivory);border-radius:16px;padding:14px 12px;box-shadow:0 6px 18px rgba(0,0,0,.28);overflow-x:auto}
+  table.st{width:100%;border-collapse:collapse;color:#22201A;font-size:15px;min-width:520px}
+  table.st th{font-size:13px;color:#8A8264;font-weight:800;padding:6px 6px;border-bottom:2px solid #E4DCC4;text-align:center;white-space:nowrap}
+  table.st td{padding:8px 6px;border-bottom:1px solid #EFE8D4;text-align:center;white-space:nowrap;font-weight:700}
+  table.st td.nm{text-align:left;font-weight:900;font-size:16px}
+  table.st td.rk{color:#B79445;font-weight:900}
+  table.st tr:nth-child(even) td{background:rgba(216,169,78,.06)}
+  .pos{color:var(--red);font-weight:900}
+  .neg{color:var(--green);font-weight:900}
+  .stnote{max-width:720px;margin:10px auto 0;text-align:center;font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
   <div class="head">
-    <h1>🀄 開播行程</h1>
-    <div class="sub">哪幾天有開 · 幾點開 · 當天有誰</div>
+    <h1>🀄 哨子麻將村</h1>
+    <div class="sub">開播行程 · 累積戰績 · 只供查詢</div>
     <span id="badge">⚪ 載入中…</span>
   </div>
+  <div class="tabs">
+    <button class="tab active" id="tabSchedule" onclick="showTab('schedule')">📅 開播行程</button>
+    <button class="tab" id="tabStats" onclick="showTab('stats')">🏆 累積戰績</button>
+  </div>
   <div class="wrap" id="list"><div class="empty">載入中…</div></div>
-  <div class="foot">此頁會即時更新 · 只供查詢</div>
+  <div class="wrap" id="stats" style="display:none"><div class="empty">載入中…</div></div>
+  <div class="foot">此頁會即時更新 · 只供查詢,不會更動任何資料</div>
 
 <script>
 const firebaseConfig = {
@@ -58,12 +78,91 @@ const WD=['日','一','二','三','四','五','六'];
 const ST={open:{t:'確定開',c:'#37D08A'},tentative:{t:'暫定',c:'#E6B84A'},off:{t:'休息',c:'#9AA0A6'}};
 
 let schedule=[], signups={};
+let db={roster:[], sessions:[], adjustments:[], baselines:{}};
+let curTab='schedule';
+
 function asArray(v){return Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean);}
 function esc(s){return (''+(s||'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function skey(r){return (r&&(r.id||r.date))||'';}
 function okName(n){n=(''+n).trim();if(!n)return false;if(n==='-')return false;if(/^[0-9]$/.test(n))return false;return true;}
 function daySignups(date){const v=signups[date];const arr=Array.isArray(v)?v:(v?Object.values(v):[]);return arr.filter(okName);}
 
+/* ===== 計分引擎(與 index 一致,唯讀計算)===== */
+function seatingList(s){ return (Array.isArray(s.seatings)&&s.seatings.length)?s.seatings:[{jiang:1,seats:s.seats||[]}]; }
+function allOccupants(s){ const set=new Set(); seatingList(s).forEach(x=>(x.seats||[]).forEach(p=>{if(p)set.add(p)})); return [...set]; }
+function dealerBonus(streak){return 1+2*streak}
+function seatingForJiang(s,jiang){ const arr=seatingList(s);let best=arr[0]; arr.forEach(x=>{const j=x.jiang||1;if(j<=jiang&&j>=(best.jiang||1))best=x}); return best.seats; }
+function startDealerForJiang(s,j){ const list=(Array.isArray(s.seatings)?s.seatings:[]); const e=list.find(x=>(x.jiang||1)===j); if(e&&e.startDealer!=null)return e.startDealer; return j===1?(s.startDealer||0):0; }
+function replay(s){
+  let jiang=1; let dealer=startDealerForJiang(s,1), streak=0, passes=0; const states=[];
+  for(const h of (s.hands||[])){
+    states.push({dealer,streak,passes});
+    const dealerWon = h.type==='multiron' ? (h.wins||[]).some(w=>w.seat===dealer) : (h.winner===dealer);
+    if(h.type==='draw'||dealerWon){streak++}
+    else{ streak=0;dealer=(dealer+1)%4;passes++; const nj=Math.floor(passes/16)+1; if(nj!==jiang){jiang=nj;dealer=startDealerForJiang(s,nj);streak=0;} }
+  }
+  return {states, dealer, streak, passes};
+}
+function playerTotals(s){
+  const m={}; const ensure=pid=>{if(!m[pid])m[pid]={score:0,zimo:0,ron:0,gun:0,mo:0};return m[pid]};
+  allOccupants(s).forEach(ensure);
+  const r=replay(s);
+  (s.hands||[]).forEach((h,idx)=>{
+    if(h.type==='draw')return;
+    const st=r.states[idx];
+    const bonus=h.noBonus?0:dealerBonus(st.streak);
+    const pay=(tai)=>s.base+tai*s.perTai;
+    const seatsNow=seatingForJiang(s,Math.floor(st.passes/16)+1);
+    const occ=seat=>ensure(seatsNow[seat]);
+    if(h.type==='zimo'){
+      const W=occ(h.winner);W.zimo++;
+      s.seats.forEach((_,i)=>{
+        if(i===h.winner)return;
+        const P=occ(i);P.mo++;
+        const addBonus=(h.winner!==st.dealer)&&(i===st.dealer);
+        const amt=pay(h.tai+(addBonus?bonus:0));
+        P.score-=amt;W.score+=amt;
+      });
+    }else if(h.type==='multiron'){
+      const G=occ(h.gun);
+      (h.wins||[]).forEach(w=>{ const W=occ(w.seat); const amt=pay(w.tai||0); W.ron++;W.score+=amt;G.gun++;G.score-=amt; });
+    }else{
+      const W=occ(h.winner),G=occ(h.gun); const amt=pay(h.tai); W.ron++;W.score+=amt;G.gun++;G.score-=amt;
+    }
+  });
+  (s.penalties||[]).forEach(pen=>{ const pts=pen.points||1; if(m[pen.caller])m[pen.caller].score-=pts; if(m[pen.discarder])m[pen.discarder].score+=pts; });
+  return m;
+}
+function lifetimeStats(){
+  const m={};
+  (db.roster||[]).forEach(p=>m[p.id]={id:p.id,name:p.name,games:0,jiangs:0,score:0,zimo:0,ron:0,gun:0});
+  (db.sessions||[]).forEach(s=>{
+    if(!s)return;
+    const pt=playerTotals(s); const r=replay(s);
+    const jset=new Set(); r.states.forEach(st=>jset.add(Math.floor(st.passes/16)+1));
+    allOccupants(s).forEach(pid=>{
+      if(!m[pid]||!pt[pid])return;
+      const st=pt[pid];
+      m[pid].games++;m[pid].score+=st.score;m[pid].zimo+=st.zimo;m[pid].ron+=st.ron;m[pid].gun+=st.gun;
+    });
+    jset.forEach(j=>{seatingForJiang(s,j).forEach(pid=>{if(m[pid])m[pid].jiangs++})});
+  });
+  (db.adjustments||[]).forEach(a=>{if(a&&m[a.pid]){m[a.pid].score+=(+a.score||0);m[a.pid].jiangs+=(+a.jiangs||0);m[a.pid].zimo+=(+a.zimo||0);m[a.pid].ron+=(+a.hupai||0);m[a.pid].gun+=(+a.gun||0);}});
+  Object.keys(db.baselines||{}).forEach(pid=>{const b=db.baselines[pid];if(b&&m[pid]){m[pid].score+=(+b.score||0);m[pid].jiangs+=(+b.jiangs||0);m[pid].zimo+=(+b.zimo||0);m[pid].ron+=(+b.ron||0);m[pid].gun+=(+b.gun||0);}});
+  return Object.values(m);
+}
+
+/* ===== 分頁切換 ===== */
+function showTab(t){
+  curTab=t;
+  document.getElementById('list').style.display = t==='schedule'?'block':'none';
+  document.getElementById('stats').style.display = t==='stats'?'block':'none';
+  document.getElementById('tabSchedule').classList.toggle('active',t==='schedule');
+  document.getElementById('tabStats').classList.toggle('active',t==='stats');
+  if(t==='stats')renderStats();
+}
+
+/* ===== 開播行程 ===== */
 function render(){
   const el=document.getElementById('list');
   const now=new Date();
@@ -103,6 +202,34 @@ function render(){
   }).join('');
 }
 
+/* ===== 累積戰績大表 ===== */
+function avg(n,j){return (j>0)?(n/j).toFixed(2):'–';}
+function renderStats(){
+  const el=document.getElementById('stats'); if(!el)return;
+  const rows=lifetimeStats().filter(p=>p.games>0||p.score!==0||p.jiangs!==0||p.zimo||p.ron||p.gun);
+  rows.sort((a,b)=>b.score-a.score);
+  if(!rows.length){ el.innerHTML='<div class="empty">還沒有戰績資料 🀄</div>'; return; }
+  const cls=v=>v>0?'pos':(v<0?'neg':'');
+  const sign=v=>(v>0?'+':'')+v;
+  let html='<div class="stcard"><table class="st"><thead><tr>'
+    +'<th>#</th><th style="text-align:left">玩家</th><th>總分</th><th>將</th><th>自摸率</th><th>胡牌率</th><th>放槍率</th>'
+    +'</tr></thead><tbody>';
+  rows.forEach((p,i)=>{
+    html+='<tr>'
+      +'<td class="rk">'+(i+1)+'</td>'
+      +'<td class="nm">'+esc(p.name)+'</td>'
+      +'<td class="'+cls(p.score)+'">'+sign(p.score)+'</td>'
+      +'<td>'+p.jiangs+'</td>'
+      +'<td>'+avg(p.zimo,p.jiangs)+'</td>'
+      +'<td>'+avg(p.ron,p.jiangs)+'</td>'
+      +'<td>'+avg(p.gun,p.jiangs)+'</td>'
+    +'</tr>';
+  });
+  html+='</tbody></table></div>';
+  html+='<div class="stnote">總分正=紅、負=綠 · 自摸率/胡牌率/放槍率＝次數÷將數(每將平均)· 含補登與歸檔累計 · 即時更新</div>';
+  el.innerHTML=html;
+}
+
 (function init(){
   if(typeof firebase==='undefined'){document.getElementById('badge').textContent='🔴 載入失敗';return;}
   try{ firebase.initializeApp(firebaseConfig); }catch(e){}
@@ -110,8 +237,13 @@ function render(){
   firebase.auth().onAuthStateChanged(function(user){
     if(!user)return;
     document.getElementById('badge').textContent='🟢 已連線';
-    firebase.database().ref('rooms/'+ROOM_ID+'/schedule').on('value',s=>{ schedule=asArray(s.val()); render(); });
-    firebase.database().ref('rooms/'+ROOM_ID+'/signups').on('value',s=>{ signups=s.val()||{}; render(); });
+    const R='rooms/'+ROOM_ID+'/';
+    firebase.database().ref(R+'schedule').on('value',s=>{ schedule=asArray(s.val()); render(); });
+    firebase.database().ref(R+'signups').on('value',s=>{ signups=s.val()||{}; render(); });
+    firebase.database().ref(R+'roster').on('value',s=>{ db.roster=asArray(s.val()); if(curTab==='stats')renderStats(); });
+    firebase.database().ref(R+'sessions').on('value',s=>{ const v=s.val(); db.sessions=Array.isArray(v)?v:Object.values(v||{}); if(curTab==='stats')renderStats(); });
+    firebase.database().ref(R+'adjustments').on('value',s=>{ const v=s.val(); db.adjustments=Array.isArray(v)?v:Object.values(v||{}); if(curTab==='stats')renderStats(); });
+    firebase.database().ref(R+'baselines').on('value',s=>{ db.baselines=s.val()||{}; if(curTab==='stats')renderStats(); });
   });
   // 每分鐘重繪一次,讓過了開播時間的場次自動消失
   setInterval(render,60000);
