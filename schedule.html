@@ -71,7 +71,7 @@
 </head>
 <body>
   <div class="head">
-    <h1>🀄 開播行程登記 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">schedule v0821-0324</span></h1>
+    <h1>🀄 開播行程登記 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">schedule v0824-0332</span></h1>
     <div class="sub">點「我要報名」→ 輸入名字 → 按確認,就完成報名!<br>資料會即時同步到直播畫面。</div>
     <span id="badge">⚪ 連線中…</span>
   </div>
@@ -228,7 +228,7 @@ function render(){
   const rows=schedule.map((r)=>r).filter(r=>{
     const d=r&&r.date?new Date(r.date+'T00:00:00'):null;
     return d&&!isNaN(d)&&d>=today;
-  }).sort((x,y)=>(x.date||'').localeCompare(y.date||''));
+  }).sort((x,y)=>((x.date||'')+' '+(x.time||'')).localeCompare((y.date||'')+' '+(y.time||'')));
   if(!rows.length){
     el.innerHTML='<div class="empty">近期還沒有安排開播日,請等管理員新增 🀄</div>';return;
   }
