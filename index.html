@@ -296,7 +296,7 @@ body.greenscreen .ov-foot{display:none}
 
 <div id="idleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99998;background:#D8A94E;color:#1a1a1a;text-align:center;padding:10px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⏰ 已閒置 20 分鐘。若已打完請按「結束本場」;再閒置 10 分鐘會自動結束並歸檔。 <button class="btn" style="padding:4px 12px;margin:0 4px" onclick="endSession()">結束本場</button> <button class="btn btn-outline" style="padding:4px 12px" onclick="dismissIdle()">繼續打</button></div>
   <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0824-0335・b47星期同行</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0824-0340・b48行程即排序</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
   <span id="lastWriteInfo" style="font-size:11px;color:rgba(246,241,227,.5);margin-left:8px"></span>
   <div class="tabs">
@@ -1965,7 +1965,7 @@ function renderOverlay(){
     pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':nx.mode==='schedule'?'接下來三週行程':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=47;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=48;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
@@ -2344,7 +2344,7 @@ function renderScheduleEditor(){
   if(!sc.length){el.innerHTML='<div style="font-size:13px;color:rgba(246,241,227,.5);padding:6px 0">尚未新增行程,按下方「新增一天」。</div>';return;}
   const esc=x=>(''+(x||'')).replace(/[<>&]/g,'');
   const jsq=x=>(''+(x||'')).replace(/['"\\]/g,'');
-  el.innerHTML=sc.map((r,i)=>{
+  el.innerHTML=sc.map((r,i)=>({r,i})).sort((a,b)=>((a.r.date||'')+' '+(a.r.time||'')).localeCompare((b.r.date||'')+' '+(b.r.time||''))).map(({r,i})=>{
     const st=r.status||'open';
     const nv=(r.note||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
     const jv=r.jiang?(''+r.jiang).replace(/[^0-9]/g,''):'';
