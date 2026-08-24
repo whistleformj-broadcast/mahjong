@@ -28,6 +28,7 @@
   .wd{font-size:15px;font-weight:800;color:var(--gold)}
   .date-ro{font-size:19px;font-weight:800;color:var(--ivory)}
   .time-ro{font-size:18px;font-weight:900;color:var(--gold);margin-left:6px}
+  .jiang-ro{font-size:16px;font-weight:900;color:var(--gold);margin-left:6px}
   .badge-ro{margin-left:auto;font-size:14px;font-weight:900;color:#173d2b;padding:5px 14px;border-radius:16px;white-space:nowrap}
   .note-ro{margin-top:10px;font-size:14px;color:var(--muted);line-height:1.5}
   .past-tag{font-size:11px;color:var(--muted);border:1px solid var(--muted);border-radius:10px;padding:1px 7px}
@@ -70,7 +71,7 @@
 </head>
 <body>
   <div class="head">
-    <h1>🀄 開播行程登記 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">schedule v0818-0052</span></h1>
+    <h1>🀄 開播行程登記 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">schedule v0821-0324</span></h1>
     <div class="sub">點「我要報名」→ 輸入名字 → 按確認,就完成報名!<br>資料會即時同步到直播畫面。</div>
     <span id="badge">⚪ 連線中…</span>
   </div>
@@ -255,10 +256,11 @@ function render(){
         +action;
     }
     const timeRo=r.time?' <span class="time-ro">'+esc(r.time)+'</span>':'';
+    const jiangRo=(st!=='off'&&r.jiang)?' <span class="jiang-ro">'+esc(r.jiang)+'將</span>':'';
     const noteRo=r.note?'<div class="note-ro">📌 '+esc(r.note)+'</div>':'';
     return '<div class="card" data-date="'+r.date+'" data-key="'+skey(r)+'">'
       +'<div class="row1">'
-        +'<span class="date-ro">'+md+' <span class="wd">'+wd+'</span>'+timeRo+'</span>'
+        +'<span class="date-ro">'+md+' <span class="wd">'+wd+'</span>'+timeRo+jiangRo+'</span>'
         +'<span class="badge-ro" style="background:'+stt.c+'">'+stt.t+'</span>'
       +'</div>'
       +signupHtml
