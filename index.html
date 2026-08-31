@@ -93,11 +93,11 @@ td.round{white-space:nowrap;color:rgba(246,241,227,.75)}
 /* ── 實況疊層版面 ── */
 #broadcast{position:relative;width:100%;min-height:78vh}
 body.greenscreen #broadcast{min-height:88vh}
-.bc-summary{position:absolute;top:0;left:0;background:rgba(9,20,15,.82);border:1px solid rgba(216,169,78,.5);border-radius:8px;overflow:hidden;backdrop-filter:blur(2px)}
+.bc-summary{position:absolute;top:0;left:0;width:max-content;background:rgba(9,20,15,.82);border:1px solid rgba(216,169,78,.5);border-radius:8px;overflow:hidden;backdrop-filter:blur(2px)}
 body.greenscreen .bc-summary{background:rgba(9,20,15,.94)}
 .bc-summary table{width:auto;border-collapse:collapse;font-size:calc(15px*var(--sumf,1))}
-.bc-summary th{background:rgba(216,169,78,.9);color:#22201A;font-weight:900;padding:5px 12px;font-size:calc(13px*var(--sumf,1));letter-spacing:1px;text-align:center;border:none}
-.bc-summary td{padding:5px 12px;text-align:center;font-weight:700;border-bottom:1px solid rgba(246,241,227,.1);font-variant-numeric:tabular-nums;color:var(--ivory)}
+.bc-summary th{background:rgba(216,169,78,.9);color:#22201A;font-weight:900;padding:5px 12px;font-size:calc(13px*var(--sumf,1));letter-spacing:1px;text-align:center;border:none;white-space:nowrap}
+.bc-summary td{padding:5px 12px;text-align:center;font-weight:700;border-bottom:1px solid rgba(246,241,227,.1);font-variant-numeric:tabular-nums;color:var(--ivory);white-space:nowrap}
 .bc-summary td.nm{text-align:left;font-weight:900;color:#fff}
 .bc-summary tr:last-child td{border-bottom:none}
 .bc-summary td.p{color:#E8837A}.bc-summary td.n{color:#7FD9AC}
@@ -293,7 +293,7 @@ body.greenscreen .ov-foot{display:none}
   /* ===== MIGI 火焰特效 ===== */
   .bc-corner.migi{overflow:visible;border-color:rgba(255,205,110,1);animation:migiGlow .55s ease-in-out infinite alternate, migiShake .13s linear infinite}
   @keyframes migiGlow{0%{box-shadow:0 0 10px 1px rgba(255,160,50,.6),0 0 22px 4px rgba(255,80,20,.35)}100%{box-shadow:0 0 20px 4px rgba(255,200,80,.9),0 0 40px 9px rgba(255,90,20,.55)}}
-  @keyframes migiShake{0%{transform:translate(0,0)}25%{transform:translate(.5px,-.4px)}50%{transform:translate(-.4px,.4px)}75%{transform:translate(.4px,.4px)}100%{transform:translate(-.4px,-.3px)}}
+  @keyframes migiShake{0%{transform:translate(0,0) scale(var(--sc,1))}25%{transform:translate(.5px,-.4px) scale(var(--sc,1))}50%{transform:translate(-.4px,.4px) scale(var(--sc,1))}75%{transform:translate(.4px,.4px) scale(var(--sc,1))}100%{transform:translate(-.4px,-.3px) scale(var(--sc,1))}}
   .migifx{position:absolute;inset:-4px;border-radius:12px;pointer-events:none;z-index:6}
   .migifx .frow{position:absolute;left:2px;right:2px;bottom:100%;height:28px;display:flex;justify-content:space-between;align-items:flex-end}
   .migifx .frow i{display:block;width:13px;height:24px;border-radius:50% 50% 46% 46%/64% 64% 40% 40%;background:radial-gradient(circle at 50% 80%,#fff6d0 0%,#ffd257 22%,#ff9b2e 50%,#ff4d1a 76%,rgba(255,60,20,0) 100%);filter:blur(1.5px);mix-blend-mode:screen;transform-origin:50% 100%;animation:migiFlick .55s ease-in-out infinite}
@@ -331,7 +331,7 @@ body.greenscreen .ov-foot{display:none}
 
 <div id="idleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99998;background:#D8A94E;color:#1a1a1a;text-align:center;padding:10px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⏰ 已閒置 20 分鐘。若已打完請按「結束本場」;再閒置 10 分鐘會自動結束並歸檔。 <button class="btn" style="padding:4px 12px;margin:0 4px" onclick="endSession()">結束本場</button> <button class="btn btn-outline" style="padding:4px 12px" onclick="dismissIdle()">繼續打</button></div>
   <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0824-0835・b51連莊金框</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0824-0012・b52MIGI縮放與表格</span></h1>
   <span id="connBadge">⚪ 初始化中…</span>
   <span id="lastWriteInfo" style="font-size:11px;color:rgba(246,241,227,.5);margin-left:8px"></span>
   <div class="tabs">
@@ -1520,8 +1520,8 @@ function applyPositions(){
     }else{
       el.style.left='';el.style.top='';el.style.right='';el.style.bottom='';
     }
-    if(p.scale&&p.scale!==1){el.style.transformOrigin='top left';el.style.transform='scale('+p.scale+')';}
-    else if(p.scale===1){el.style.transform='';}
+    if(p.scale&&p.scale!==1){el.style.transformOrigin='top left';el.style.setProperty('--sc',p.scale);el.style.transform='scale('+p.scale+')';}
+    else if(p.scale===1){el.style.setProperty('--sc',1);el.style.transform='';}
     // p.scale 讀不到時保留現有 transform,避免某次重繪把已放大的卡瞬間縮回(閃爍主因)
   });
 }
@@ -2015,7 +2015,7 @@ function renderOverlay(){
     pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':nx.mode==='schedule'?'接下來三週行程':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=51;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=52;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
