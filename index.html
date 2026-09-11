@@ -224,10 +224,10 @@ tr.penrow td.round{color:#C13B2E;font-weight:900}
 /* 超過十台自摸:數字噴火特效 */
 .bc-corner.firing{overflow:visible!important;z-index:20}
     /* 分數變化浮動字 +X/-X(台灣慣例:加分紅、扣分綠),浮起淡出後消失 */
-    .score-delta{position:absolute;transform:translate(-50%,-50%);font-size:46px;font-weight:900;font-variant-numeric:tabular-nums;pointer-events:none;z-index:60;text-shadow:0 2px 10px rgba(0,0,0,.7),0 0 4px rgba(0,0,0,.6);animation:deltaFloat 3s cubic-bezier(.2,.7,.3,1) forwards}
+    .score-delta{position:absolute;transform:translate(-50%,-50%);font-size:46px;font-weight:900;font-variant-numeric:tabular-nums;pointer-events:none;z-index:60;text-shadow:0 2px 10px rgba(0,0,0,.7),0 0 4px rgba(0,0,0,.6);animation:deltaFloat 5s cubic-bezier(.2,.7,.3,1) forwards}
     .score-delta.up{color:#FF5A4D}
     .score-delta.down{color:#37D08A}
-    @keyframes deltaFloat{0%{opacity:0;transform:translate(-50%,-20%) scale(.5)}14%{opacity:1;transform:translate(-50%,-55%) scale(1.2)}28%{transform:translate(-50%,-72%) scale(1)}100%{opacity:0;transform:translate(-50%,-165%) scale(1)}}
+    @keyframes deltaFloat{0%{opacity:0;transform:translate(-50%,-20%) scale(.5)}8%{opacity:1;transform:translate(-50%,-55%) scale(1.2)}16%{transform:translate(-50%,-72%) scale(1)}62%{opacity:1;transform:translate(-50%,-118%) scale(1)}100%{opacity:0;transform:translate(-50%,-185%) scale(1)}}
 .bc-corner .sc.fire{animation:scFire 4.5s ease-out;position:relative;z-index:6}
 @keyframes scFire{
   0%{color:#fff;text-shadow:0 0 4px #fff}
@@ -329,6 +329,28 @@ body.greenscreen .ov-foot{display:none}
   body.scoremode .tabs{display:none!important}
   body.scoremode #scoreModeBadge{display:inline-block}
   #scoreModeBadge{display:none;font-size:11px;font-weight:800;margin-left:8px;padding:2px 9px;border-radius:20px;background:#2E8B62;color:#fff;letter-spacing:1px}
+
+  /* ===== 計分頁置頂戰況表 ===== */
+  .ctrl-summary{position:sticky;top:0;z-index:30;margin:0 0 12px;padding:8px 8px 4px;background:rgba(9,20,15,.97);border:1px solid rgba(216,169,78,.45);border-radius:10px;backdrop-filter:blur(3px);overflow-x:auto}
+  .ctrl-summary:empty{display:none}
+  .ctrl-summary table{width:100%;border-collapse:collapse;color:var(--ivory);font-size:13px;min-width:420px}
+  .ctrl-summary th{background:rgba(216,169,78,.9);color:#22201A;font-weight:900;padding:4px 6px;font-size:12px;text-align:center;white-space:nowrap}
+  .ctrl-summary td{padding:4px 6px;text-align:center;font-weight:700;border-bottom:1px solid rgba(246,241,227,.1);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .ctrl-summary td.nm{text-align:left;font-weight:900}
+  .ctrl-summary td.p{color:#FF5A4D}
+  .ctrl-summary td.n{color:#37D08A}
+  .ctrl-summary tr.lead td{background:rgba(216,169,78,.14)}
+
+  /* ===== 特殊牌型 全螢幕蓋板 ===== */
+  .special-cover{position:absolute;inset:0;z-index:80;display:none;align-items:center;justify-content:center;overflow:hidden}
+  .special-cover.show{display:flex}
+  .special-cover .sc-veil{position:absolute;inset:0;background:rgba(0,0,0,.55);opacity:0;animation:scVeil .35s ease forwards}
+  @keyframes scVeil{to{opacity:1}}
+  .special-cover .sc-banner{position:relative;z-index:3;width:100%;line-height:0;box-shadow:0 0 60px rgba(255,140,30,.55),0 20px 50px rgba(0,0,0,.5);animation:scIn .7s cubic-bezier(.16,.9,.2,1) both}
+  .special-cover .sc-banner video{width:100%;display:block}
+  @keyframes scIn{0%{opacity:0;transform:scale(.6) rotate(-2deg);filter:blur(8px)}60%{opacity:1;transform:scale(1.03);filter:blur(0)}100%{transform:scale(1)}}
+  .special-cover .sc-flash{position:absolute;inset:0;z-index:5;background:radial-gradient(circle at 50% 50%,rgba(255,250,235,.9),rgba(255,190,90,0) 55%);opacity:0;animation:scFlash .7s ease-out;pointer-events:none}
+  @keyframes scFlash{0%{opacity:0;transform:scale(.3)}16%{opacity:1}100%{opacity:0;transform:scale(1.7)}}
 </style>
 </head>
 <body>
@@ -336,7 +358,7 @@ body.greenscreen .ov-foot{display:none}
 
 <div id="idleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99998;background:#D8A94E;color:#1a1a1a;text-align:center;padding:10px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⏰ 已閒置 20 分鐘。若已打完請按「結束本場」;再閒置 10 分鐘會自動結束並歸檔。 <button class="btn" style="padding:4px 12px;margin:0 4px" onclick="endSession()">結束本場</button> <button class="btn btn-outline" style="padding:4px 12px" onclick="dismissIdle()">繼續打</button></div>
   <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0824-0752・b53純計分模式</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0911-0830・b56三牌型蓋板</span></h1>
   <span id="connBadge">⚪ 初始化中…</span><span id="scoreModeBadge">純計分模式</span>
   <span id="lastWriteInfo" style="font-size:11px;color:rgba(246,241,227,.5);margin-left:8px"></span>
   <div class="tabs">
@@ -350,6 +372,7 @@ body.greenscreen .ov-foot{display:none}
 
 <!-- ═══════════ 控制台 ═══════════ -->
 <div id="controlView" class="wrap">
+  <div id="controlSummary" class="ctrl-summary"></div>
 
   <div class="warn" id="setupWarn" style="display:none">
     ⚠️ <b>尚未設定 Firebase</b>,目前資料只存在這台裝置(localStorage 模式)。<br>
@@ -443,6 +466,14 @@ body.greenscreen .ov-foot{display:none}
         <button class="btn btn-gold" id="confirmBtn" onclick="confirmHand()" disabled>確認記錄 ✓</button>
         <button class="btn btn-outline" onclick="undoHand()">刪除上一把</button>
         <button class="btn btn-red" onclick="endSession()">結束本場並歸檔 ■</button>
+      </div>
+    </div>
+
+    <div class="panel collapsible collapsed" id="specialPanel">
+      <h2 class="collhead" onclick="toggleCollapse('specialPanel')">🎴 特殊牌型 <span class="caret">▾</span></h2>
+      <div class="panel-body">
+        <div style="font-size:13px;color:rgba(246,241,227,.7);line-height:1.6;margin-bottom:10px">胡到特殊牌型時,按對應牌型 → 直播畫面會全螢幕播放蓋板動畫(約 6 秒自動收)。</div>
+        <div class="grid4" id="specialBtns"></div>
       </div>
     </div>
 
@@ -598,6 +629,7 @@ body.greenscreen .ov-foot{display:none}
 <!-- ═══════════ 直播畫面(實況疊層版面)═══════════ -->
 <div id="overlayView">
   <div id="broadcast">
+    <div id="specialCover" class="special-cover"></div>
     <!-- 左上:當日總結表 -->
     <div class="bc-summary" id="bcSummary"></div>
     <!-- 右上:將數/主題徽章 -->
@@ -760,6 +792,7 @@ function normalize(d){
   d.schedule=Array.isArray(d.schedule)?d.schedule:Object.values(d.schedule||{});  // 開播行程
   d.signups=(d.signups&&typeof d.signups==='object')?d.signups:{};
   d.migi=(d.migi&&typeof d.migi==='object')?d.migi:{};
+  d.special=(d.special&&typeof d.special==='object')?d.special:{};
   d.adjustments=Array.isArray(d.adjustments)?d.adjustments:[];
   d.baselines=(d.baselines&&typeof d.baselines==='object')?d.baselines:{};              // 每日報名名單
   d.roster=Array.isArray(d.roster)?d.roster:Object.values(d.roster||{});
@@ -877,7 +910,7 @@ function buildSaveDiff(){
   const cur=JSON.parse(JSON.stringify(db));
   const prev=_pushed||{};
   const updates={};
-  const TOP=['roster','currentId','overlayPos','fontSummary','fontCards','fx','schedule','signups','adjustments','baselines','build','savedLayout','rescaled20','migi'];
+  const TOP=['roster','currentId','overlayPos','fontSummary','fontCards','fx','schedule','signups','adjustments','baselines','build','savedLayout','rescaled20','migi','special'];
   TOP.forEach(k=>{ if(JSON.stringify(cur[k])!==JSON.stringify(prev[k])) updates[k]=(cur[k]===undefined?null:cur[k]); });
   const cs=cur.sessions||[], ps=prev.sessions||[];
   if(cs.length<ps.length){ updates['sessions']=cs; }            // 有刪場 → 整包寫(較少見)
@@ -1289,6 +1322,7 @@ function confirmHand(){
   }
   cur={winner:null,type:null,gun:null};
   document.getElementById('tai').value=1;
+  db.migi={};
   save();updateForm();flashOverlay();
   backupNow('計分');
 }
@@ -1349,6 +1383,7 @@ function recordMultiRon(){
   // 清空欄位
   ['mrW0','mrW1','mrW2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   ['mrT0','mrT1','mrT2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=0;});
+  db.migi={};
   save();updateForm();
   backupNow('一炮多響');
   toast('已記錄一炮三響('+wins.length+' 家胡牌)');
@@ -1495,6 +1530,8 @@ function render(){
   renderAdjustments();
   updateLastWriteInfo();
   renderMigiButtons();
+  renderSpecialButtons();
+  {const _sp=db.special;if(_sp&&_sp.ts&&_sp.ts!==_specialLast){_specialLast=_sp.ts;if(Date.now()-_sp.ts<12000)playSpecialCover(_sp.hand);}}
   renderOverlay();
   checkStale();
 }
@@ -1806,7 +1843,7 @@ function spawnDelta(cornerId,delta){
   d.style.left=(cr.left-br.left+cr.width*0.5)+'px';
   d.style.top=(cr.top-br.top+cr.height*0.42)+'px';
   bc.appendChild(d);
-  setTimeout(()=>d.remove(),3100);
+  setTimeout(()=>d.remove(),5100);
 }
 function renderBroadcast(){
   const s=curSession();
@@ -1850,9 +1887,10 @@ function renderBroadcast(){
       cell(jc[p.pid]||0)+
       '</tr>';
   });
-  summaryEl.innerHTML=`<table>
+  const _sumHTML=`<table>
     <thead><tr><th>玩家</th><th>戰績</th><th>自摸</th><th>胡牌</th><th>放槍</th><th>被摸</th><th>將數</th></tr></thead>
     <tbody>${rows}</tbody></table>`;
+  summaryEl.innerHTML=_sumHTML;{const _cs=document.getElementById('controlSummary');if(_cs)_cs.innerHTML=_sumHTML;}
 
   // ── 右上將數/圈風徽章(只保留「N 將」與「X風圈Y風局」)──
   const jiangN=Math.floor(r.passes/16)+1;
@@ -2020,7 +2058,7 @@ function renderOverlay(){
     pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':nx.mode==='schedule'?'接下來三週行程':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=53;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=56;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
@@ -2428,6 +2466,34 @@ function streakFxHtml(streak){
     sp+='<div class="p spark" style="left:'+(6+Math.random()*180).toFixed(0)+'px;top:'+(56+Math.random()*34).toFixed(0)+'px;--dx:'+(Math.random()*30-15).toFixed(0)+'px;--d:'+(1+Math.random()*0.8).toFixed(2)+'s;--delay:'+(Math.random()*1.3).toFixed(2)+'s"></div>';
   }
   return '<div class="streakring'+(cap?' cap':'')+'" style="--lv:'+L.toFixed(2)+'"></div><div class="sparkles">'+sp+'</div>';
+}
+const SPECIAL={ sian:{name:'四暗刻',file:'sian.mp4'}, qiqiang:{name:'七搶一',file:'qiqiang.mp4'}, baxian:{name:'八仙過海',file:'baxian.mp4'} };
+let _specialLast=0;
+function renderSpecialButtons(){
+  const w=document.getElementById('specialBtns'); if(!w)return;
+  w.innerHTML=Object.keys(SPECIAL).map(k=>'<button class="btn" style="background:#7a3b12;color:#fff" onclick="triggerSpecial(\''+k+'\')">🎴 '+SPECIAL[k].name+'</button>').join('')
+    +'<button class="btn btn-outline" onclick="stopSpecial()">停止蓋板</button>';
+}
+function triggerSpecial(k){
+  if(!SPECIAL[k])return;
+  db.special={hand:k,ts:Date.now()};
+  save();
+  if(typeof toast==='function')toast('✨ 已觸發「'+SPECIAL[k].name+'」蓋板');
+}
+function stopSpecial(){
+  const cov=document.getElementById('specialCover');
+  if(cov){cov.className='special-cover';cov.innerHTML='';cov.style.opacity='';cov.style.transition='';}
+}
+function playSpecialCover(k){
+  const cov=document.getElementById('specialCover'); if(!cov||!SPECIAL[k])return;
+  const ov=document.getElementById('overlayView');
+  if(ov && getComputedStyle(ov).display==='none') return;   // 非直播畫面的裝置不播、不下載
+  cov.className='special-cover show';
+  cov.innerHTML='<div class="sc-veil"></div><div class="sc-banner"><video src="'+SPECIAL[k].file+'" autoplay muted playsinline></video></div><div class="sc-flash"></div>';
+  clearTimeout(cov._t);
+  cov._t=setTimeout(()=>{ cov.style.transition='opacity .6s ease';cov.style.opacity='0';
+    setTimeout(()=>{cov.className='special-cover';cov.style.opacity='';cov.style.transition='';cov.innerHTML='';},600); },6000);
+  cov.style.transition='';cov.style.opacity='1';
 }
 function renderScheduleEditor(){
   const el=document.getElementById('scheduleList');if(!el)return;
