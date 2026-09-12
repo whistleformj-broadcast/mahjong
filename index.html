@@ -358,7 +358,7 @@ body.greenscreen .ov-foot{display:none}
 
 <div id="idleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99998;background:#D8A94E;color:#1a1a1a;text-align:center;padding:10px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⏰ 已閒置 20 分鐘。若已打完請按「結束本場」;再閒置 10 分鐘會自動結束並歸檔。 <button class="btn" style="padding:4px 12px;margin:0 4px" onclick="endSession()">結束本場</button> <button class="btn btn-outline" style="padding:4px 12px" onclick="dismissIdle()">繼續打</button></div>
   <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0911-0830・b56三牌型蓋板</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0911-1036・b57十二牌型蓋板</span></h1>
   <span id="connBadge">⚪ 初始化中…</span><span id="scoreModeBadge">純計分模式</span>
   <span id="lastWriteInfo" style="font-size:11px;color:rgba(246,241,227,.5);margin-left:8px"></span>
   <div class="tabs">
@@ -2058,7 +2058,7 @@ function renderOverlay(){
     pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':nx.mode==='schedule'?'接下來三週行程':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=56;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=57;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
@@ -2467,7 +2467,7 @@ function streakFxHtml(streak){
   }
   return '<div class="streakring'+(cap?' cap':'')+'" style="--lv:'+L.toFixed(2)+'"></div><div class="sparkles">'+sp+'</div>';
 }
-const SPECIAL={ sian:{name:'四暗刻',file:'sian.mp4'}, qiqiang:{name:'七搶一',file:'qiqiang.mp4'}, baxian:{name:'八仙過海',file:'baxian.mp4'} };
+const SPECIAL={ sian:{name:'四暗刻',file:'sian.mp4'}, wuankou:{name:'五暗刻',file:'wuankou.mp4'}, qingyise:{name:'清一色',file:'qingyise.mp4'}, couyise:{name:'湊一色',file:'couyise.mp4'}, pengpenghu:{name:'碰碰胡',file:'pengpenghu.mp4'}, dasanyuan:{name:'大三元',file:'dasanyuan.mp4'}, xiaosanyuan:{name:'小三元',file:'xiaosanyuan.mp4'}, dasixi:{name:'大四喜',file:'dasixi.mp4'}, xiaosixi:{name:'小四喜',file:'xiaosixi.mp4'}, sanxiang:{name:'三響囉',file:'sanxiang.mp4'}, qiqiang:{name:'七搶一',file:'qiqiang.mp4'}, baxian:{name:'八仙過海',file:'baxian.mp4'} };
 let _specialLast=0;
 function renderSpecialButtons(){
   const w=document.getElementById('specialBtns'); if(!w)return;
