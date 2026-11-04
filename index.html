@@ -351,14 +351,29 @@ body.greenscreen .ov-foot{display:none}
   @keyframes scIn{0%{opacity:0;transform:scale(.6) rotate(-2deg);filter:blur(8px)}60%{opacity:1;transform:scale(1.03);filter:blur(0)}100%{transform:scale(1)}}
   .special-cover .sc-flash{position:absolute;inset:0;z-index:5;background:radial-gradient(circle at 50% 50%,rgba(255,250,235,.9),rgba(255,190,90,0) 55%);opacity:0;animation:scFlash .7s ease-out;pointer-events:none}
   @keyframes scFlash{0%{opacity:0;transform:scale(.3)}16%{opacity:1}100%{opacity:0;transform:scale(1.7)}}
+
+  /* ===== 公布欄 中央輪播 ===== */
+  .board-cover{position:absolute;inset:0;z-index:70;display:none;align-items:center;justify-content:center}
+  .board-cover.show{display:flex}
+  .board-cover .bd-veil{position:absolute;inset:0;background:rgba(0,0,0,.72)}
+  .board-cover .bd-card{position:relative;z-index:2;max-width:74%;max-height:84%;background:linear-gradient(160deg,#221708,#120d06);border:2px solid var(--gold);border-radius:22px;padding:34px 42px;box-shadow:0 0 70px rgba(216,169,78,.35),0 24px 60px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;gap:22px;overflow:hidden;text-align:center;animation:bdIn .5s cubic-bezier(.16,.9,.2,1) both}
+  .board-cover .bd-img{line-height:0;max-width:100%}
+  .board-cover .bd-img img{max-width:100%;max-height:52vh;border-radius:12px;object-fit:contain}
+  .board-cover .bd-text{color:#f6f1e3;font-size:40px;font-weight:800;line-height:1.5;letter-spacing:.5px;text-shadow:0 2px 10px rgba(0,0,0,.5)}
+  .board-cover .bd-dots{display:flex;gap:10px;margin-top:2px}
+  .board-cover .bd-dots span{width:11px;height:11px;border-radius:50%;background:rgba(246,241,227,.3)}
+  .board-cover .bd-dots span.on{background:var(--gold);box-shadow:0 0 10px rgba(216,169,78,.85)}
+  @keyframes bdIn{0%{opacity:0;transform:scale(.9) translateY(14px)}100%{opacity:1;transform:scale(1) translateY(0)}}
 </style>
 </head>
 <body>
 <div id="staleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#C0392B;color:#fff;text-align:center;padding:9px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⚠️ 這個畫面的版本過舊,分數可能不正確 — 請清除快取並重新整理(電腦 Ctrl+Shift+R、OBS 右鍵來源→重新整理快取)</div>
+<div id="testBadge" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99998;background:#1f7a4d;color:#fff;text-align:center;padding:7px 12px;font-weight:800;font-size:14px;box-shadow:0 2px 10px rgba(0,0,0,.4)">🧪 測試房間（howard-mj-room-2026-test）— 跟直播完全分開，怎麼改都不影響直播</div>
+<script>if(new URLSearchParams(location.search).get('test')==='1'){var _tb=document.getElementById('testBadge');if(_tb)_tb.style.display='block';document.title='🧪測試 '+document.title;document.body&&document.body.style&&(document.body.style.paddingTop='34px');}</script>
 
 <div id="idleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99998;background:#D8A94E;color:#1a1a1a;text-align:center;padding:10px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⏰ 已閒置 20 分鐘。若已打完請按「結束本場」;再閒置 10 分鐘會自動結束並歸檔。 <button class="btn" style="padding:4px 12px;margin:0 4px" onclick="endSession()">結束本場</button> <button class="btn btn-outline" style="padding:4px 12px" onclick="dismissIdle()">繼續打</button></div>
   <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v0911-1036・b57十二牌型蓋板</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v1103-2118・b65測試房間防呆</span></h1>
   <span id="connBadge">⚪ 初始化中…</span><span id="scoreModeBadge">純計分模式</span>
   <span id="lastWriteInfo" style="font-size:11px;color:rgba(246,241,227,.5);margin-left:8px"></span>
   <div class="tabs">
@@ -366,6 +381,7 @@ body.greenscreen .ov-foot{display:none}
     <button id="tabSchedule" onclick="showView('schedule')">開播行程</button>
     <button id="tabHistory" onclick="showView('history')">玩家與歷史</button>
     <button id="tabOverlay" onclick="showView('overlay')">直播畫面</button>
+    <button id="tabBoard" onclick="showView('board')">📢 公布欄</button>
     <button id="tabDonations" onclick="showView('donations')">💰贊助紀錄</button>
   </div>
 </div>
@@ -472,7 +488,7 @@ body.greenscreen .ov-foot{display:none}
     <div class="panel collapsible collapsed" id="specialPanel">
       <h2 class="collhead" onclick="toggleCollapse('specialPanel')">🎴 特殊牌型 <span class="caret">▾</span></h2>
       <div class="panel-body">
-        <div style="font-size:13px;color:rgba(246,241,227,.7);line-height:1.6;margin-bottom:10px">胡到特殊牌型時,按對應牌型 → 直播畫面會全螢幕播放蓋板動畫(約 6 秒自動收)。</div>
+        <div style="font-size:13px;color:rgba(246,241,227,.7);line-height:1.6;margin-bottom:10px">胡到特殊牌型時,按對應牌型 → 直播畫面會全螢幕播放蓋板動畫(影片播完自動收)。</div>
         <div class="grid4" id="specialBtns"></div>
       </div>
     </div>
@@ -626,10 +642,34 @@ body.greenscreen .ov-foot{display:none}
   </div>
 </div>
 
+<!-- ═══════════ 公布欄 ═══════════ -->
+<div id="boardView" class="wrap" style="display:none">
+  <div class="panel">
+    <h2>📢 公布欄</h2>
+    <div style="font-size:13px;color:rgba(246,241,227,.7);line-height:1.6;margin-bottom:12px">上傳文字或圖片當公告，按「上架」後就會<b>一直</b>在直播畫面中央輪播，直到你按「下架」為止。</div>
+    <div id="boardStatus" style="font-size:14px;font-weight:700;margin-bottom:10px"></div>
+    <div class="btnrow" style="margin-bottom:16px">
+      <button class="btn" style="background:#2E8B62;color:#fff" onclick="boardOn()">📢 上架公布欄</button>
+      <button class="btn btn-red" onclick="boardOff()">⬇ 下架</button>
+    </div>
+    <div style="font-size:12px;color:rgba(246,241,227,.5);margin-bottom:6px">即時預覽（直播畫面會顯示這個）</div>
+    <div id="boardPreview" style="background:#0c0a07;border:1px solid rgba(216,169,78,.3);border-radius:12px;padding:16px;min-height:120px;display:flex;align-items:center;justify-content:center;margin-bottom:18px"></div>
+    <div id="boardSlides"></div>
+    <div class="btnrow" style="margin-top:10px">
+      <button class="btn btn-outline" onclick="boardAddText()">＋ 新增文字</button>
+      <label class="btn btn-outline" style="cursor:pointer;margin:0">＋ 上傳圖片<input type="file" accept="image/*" onchange="boardAddImage(this)" style="display:none"></label>
+    </div>
+    <div class="grid4" style="margin-top:12px">
+      <div><label>每張秒數</label><input type="number" id="boardSecs" min="3" max="30" value="8" onchange="boardSetSecs(this.value)"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════ 直播畫面(實況疊層版面)═══════════ -->
 <div id="overlayView">
   <div id="broadcast">
     <div id="specialCover" class="special-cover"></div>
+    <div id="boardCover" class="board-cover"></div>
     <!-- 左上:當日總結表 -->
     <div class="bc-summary" id="bcSummary"></div>
     <!-- 右上:將數/主題徽章 -->
@@ -741,7 +781,9 @@ const firebaseConfig = {
   messagingSenderId: "993789032431",
   appId: "1:993789032431:web:41480070253c3c2cf5281a"
 };
-const ROOM_ID = "howard-mj-room-2026";
+const BASE_ROOM = "howard-mj-room-2026";
+const IS_TEST = new URLSearchParams(location.search).get('test')==='1';
+const ROOM_ID = IS_TEST ? BASE_ROOM+"-test" : BASE_ROOM;   // ?test=1 → 獨立測試房間,完全不碰直播
 /* ═══════════════════════════════════════════════════════════════ */
 
 const KEY='mj_league_v2';
@@ -793,6 +835,10 @@ function normalize(d){
   d.signups=(d.signups&&typeof d.signups==='object')?d.signups:{};
   d.migi=(d.migi&&typeof d.migi==='object')?d.migi:{};
   d.special=(d.special&&typeof d.special==='object')?d.special:{};
+  d.board=(d.board&&typeof d.board==='object')?d.board:{};
+  d.board.slides=Array.isArray(d.board.slides)?d.board.slides:[];
+  if(typeof d.board.secs!=='number')d.board.secs=8;
+  if(typeof d.board.auto!=='boolean')d.board.auto=true;
   d.adjustments=Array.isArray(d.adjustments)?d.adjustments:[];
   d.baselines=(d.baselines&&typeof d.baselines==='object')?d.baselines:{};              // 每日報名名單
   d.roster=Array.isArray(d.roster)?d.roster:Object.values(d.roster||{});
@@ -910,7 +956,7 @@ function buildSaveDiff(){
   const cur=JSON.parse(JSON.stringify(db));
   const prev=_pushed||{};
   const updates={};
-  const TOP=['roster','currentId','overlayPos','fontSummary','fontCards','fx','schedule','signups','adjustments','baselines','build','savedLayout','rescaled20','migi','special'];
+  const TOP=['roster','currentId','overlayPos','fontSummary','fontCards','fx','schedule','signups','adjustments','baselines','build','savedLayout','rescaled20','migi','special','board'];
   TOP.forEach(k=>{ if(JSON.stringify(cur[k])!==JSON.stringify(prev[k])) updates[k]=(cur[k]===undefined?null:cur[k]); });
   const cs=cur.sessions||[], ps=prev.sessions||[];
   if(cs.length<ps.length){ updates['sessions']=cs; }            // 有刪場 → 整包寫(較少見)
@@ -1531,7 +1577,10 @@ function render(){
   updateLastWriteInfo();
   renderMigiButtons();
   renderSpecialButtons();
-  {const _sp=db.special;if(_sp&&_sp.ts&&_sp.ts!==_specialLast){_specialLast=_sp.ts;if(Date.now()-_sp.ts<12000)playSpecialCover(_sp.hand);}}
+  renderControlSummary();
+  ingestSpecialQueue();
+  renderBoardAdmin();
+  ingestBoard();
   renderOverlay();
   checkStale();
 }
@@ -1890,7 +1939,7 @@ function renderBroadcast(){
   const _sumHTML=`<table>
     <thead><tr><th>玩家</th><th>戰績</th><th>自摸</th><th>胡牌</th><th>放槍</th><th>被摸</th><th>將數</th></tr></thead>
     <tbody>${rows}</tbody></table>`;
-  summaryEl.innerHTML=_sumHTML;{const _cs=document.getElementById('controlSummary');if(_cs)_cs.innerHTML=_sumHTML;}
+  summaryEl.innerHTML=_sumHTML;
 
   // ── 右上將數/圈風徽章(只保留「N 將」與「X風圈Y風局」)──
   const jiangN=Math.floor(r.passes/16)+1;
@@ -2014,7 +2063,7 @@ function renderOverlay(){
     });
     const nextSt={dealer:r.dealer,streak:r.streak,passes:r.passes};
     document.getElementById('ovTitle').textContent='今日戰績';
-    document.getElementById('ovRound').textContent=roundLabel(nextSt)+'・第 '+(s.hands.length+1)+' 把・共 '+ranked.length+' 位選手';
+    document.getElementById('ovRound').textContent='已打完 '+Math.floor(r.passes/16)+' 將・'+s.hands.length+' 把・共 '+ranked.length+' 位選手';
   }else{
     const lb=lifetimeLeaderboard().sort((a,b)=>b.score-a.score);
     const cs=curSession();
@@ -2058,7 +2107,7 @@ function renderOverlay(){
     pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':nx.mode==='schedule'?'接下來三週行程':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=57;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=65;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
@@ -2151,8 +2200,9 @@ function showView(v){
   document.getElementById('scheduleView').style.display=v==='schedule'?'block':'none';
   document.getElementById('historyView').style.display=v==='history'?'block':'none';
   document.getElementById('overlayView').style.display=v==='overlay'?'block':'none';
+  document.getElementById('boardView').style.display=v==='board'?'block':'none';
   document.getElementById('donationsView').style.display=v==='donations'?'block':'none';
-  ['Control','Schedule','History','Overlay','Donations'].forEach(n=>document.getElementById('tab'+n).classList.toggle('active',n.toLowerCase()===v));
+  ['Control','Schedule','History','Overlay','Board','Donations'].forEach(n=>document.getElementById('tab'+n).classList.toggle('active',n.toLowerCase()===v));
   document.body.classList.toggle('ovview',v==='overlay');
   if(v!=='overlay'){document.body.classList.remove('greenscreen');stopSlideshow();}
   if(v==='donations'&&!window._donationsLoaded){window._donationsLoaded=true;loadDonations();}
@@ -2468,7 +2518,99 @@ function streakFxHtml(streak){
   return '<div class="streakring'+(cap?' cap':'')+'" style="--lv:'+L.toFixed(2)+'"></div><div class="sparkles">'+sp+'</div>';
 }
 const SPECIAL={ sian:{name:'四暗刻',file:'sian.mp4'}, wuankou:{name:'五暗刻',file:'wuankou.mp4'}, qingyise:{name:'清一色',file:'qingyise.mp4'}, couyise:{name:'湊一色',file:'couyise.mp4'}, pengpenghu:{name:'碰碰胡',file:'pengpenghu.mp4'}, dasanyuan:{name:'大三元',file:'dasanyuan.mp4'}, xiaosanyuan:{name:'小三元',file:'xiaosanyuan.mp4'}, dasixi:{name:'大四喜',file:'dasixi.mp4'}, xiaosixi:{name:'小四喜',file:'xiaosixi.mp4'}, sanxiang:{name:'三響囉',file:'sanxiang.mp4'}, qiqiang:{name:'七搶一',file:'qiqiang.mp4'}, baxian:{name:'八仙過海',file:'baxian.mp4'} };
-let _specialLast=0;
+let _specialPlayed={}, _specialQueue=[], _specialPlaying=false;
+/* ===== 公布欄(常設:上架後持續輪播,下架才停)===== */
+let _boardTimer=null,_boardIdx=0,_boardPlaying=false,_previewTimer=null,_previewIdx=0;
+function boardEnsure(){ if(!db.board||typeof db.board!=='object')db.board={}; if(!Array.isArray(db.board.slides))db.board.slides=[]; if(typeof db.board.secs!=='number')db.board.secs=8; if(typeof db.board.on!=='boolean')db.board.on=false; }
+function boardEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function newBoardId(){return Date.now()+'_'+Math.random().toString(36).slice(2,6);}
+function renderBoardAdmin(){
+  const w=document.getElementById('boardSlides'); if(!w)return; boardEnsure();
+  const secEl=document.getElementById('boardSecs'); if(secEl&&document.activeElement!==secEl)secEl.value=db.board.secs;
+  const slides=db.board.slides;
+  if(!slides.length){ w.innerHTML='<div style="color:rgba(246,241,227,.5);font-size:13px;padding:8px 0">目前沒有公告。用下方按鈕新增文字或上傳圖片。</div>'; return; }
+  if(w.querySelector('textarea:focus'))return;
+  w.innerHTML=slides.map((sl,i)=>{
+    const thumb=sl.img?'<img src="'+sl.img+'" style="width:72px;height:72px;object-fit:cover;border-radius:8px;flex:none;border:1px solid rgba(216,169,78,.4)">':'<div style="width:72px;height:72px;border-radius:8px;flex:none;background:rgba(246,241,227,.08);display:flex;align-items:center;justify-content:center;color:rgba(246,241,227,.4);font-size:12px">純文字</div>';
+    return '<div style="display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid rgba(246,241,227,.12);border-radius:10px;margin-bottom:8px">'+thumb
+      +'<div style="flex:1;min-width:0">'
+        +'<textarea onchange="boardSaveText(\''+sl.id+'\',this.value)" placeholder="輸入文字(可留空只放圖)" style="width:100%;min-height:52px;resize:vertical;font-size:13px">'+boardEsc(sl.text||'')+'</textarea>'
+        +'<div class="btnrow" style="margin-top:6px">'
+          +'<button class="btn btn-sm btn-outline" onclick="boardMove(\''+sl.id+'\',-1)" '+(i===0?'disabled':'')+'>↑</button>'
+          +'<button class="btn btn-sm btn-outline" onclick="boardMove(\''+sl.id+'\',1)" '+(i===slides.length-1?'disabled':'')+'>↓</button>'
+          +'<button class="btn btn-sm btn-red" onclick="boardDelete(\''+sl.id+'\')">刪除</button>'
+        +'</div></div></div>';
+  }).join('');
+}
+function boardAddText(){ boardEnsure(); if(db.board.slides.length>=12){toast('最多 12 則公告');return;} db.board.slides.push({id:newBoardId(),text:'新公告',img:''}); save(); renderBoardAdmin(); renderBoardPreview(); }
+function boardSaveText(id,val){ boardEnsure(); const sl=db.board.slides.find(x=>x.id===id); if(!sl)return; sl.text=val; save(); renderBoardPreview(); }
+function boardDelete(id){ boardEnsure(); db.board.slides=db.board.slides.filter(x=>x.id!==id); save(); renderBoardAdmin(); renderBoardPreview(); }
+function boardMove(id,dir){ boardEnsure(); const a=db.board.slides,i=a.findIndex(x=>x.id===id); if(i<0)return; const j=i+dir; if(j<0||j>=a.length)return; const t=a[i];a[i]=a[j];a[j]=t; save(); renderBoardAdmin(); renderBoardPreview(); }
+function boardSetSecs(v){ boardEnsure(); db.board.secs=Math.min(30,Math.max(3,parseInt(v)||8)); save(); clearInterval(_previewTimer);_previewTimer=null; clearInterval(_boardTimer);_boardTimer=null; if(_boardPlaying){_boardPlaying=false;ingestBoard();} }
+function boardAddImage(input){
+  const f=input.files&&input.files[0]; if(!f)return;
+  boardEnsure(); if(db.board.slides.length>=12){toast('最多 12 則公告');input.value='';return;}
+  const rd=new FileReader();
+  rd.onload=e=>{ const img=new Image(); img.onload=()=>{
+    const max=1200; let w=img.width,h=img.height; const sc=Math.min(1,max/Math.max(w,h)); w=Math.round(w*sc); h=Math.round(h*sc);
+    const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const ctx=cv.getContext('2d'); ctx.fillStyle='#17110a'; ctx.fillRect(0,0,w,h); ctx.drawImage(img,0,0,w,h);
+    const data=cv.toDataURL('image/jpeg',0.82);
+    db.board.slides.push({id:newBoardId(),text:'',img:data}); save(); renderBoardAdmin(); renderBoardPreview(); toast('已新增圖片公告');
+  }; img.onerror=()=>toast('圖片讀取失敗'); img.src=e.target.result; };
+  rd.readAsDataURL(f); input.value='';
+}
+function boardOn(){ boardEnsure(); if(!db.board.slides.length){toast('還沒有任何公告,先新增文字或圖片');return;} db.board.on=true; save(); ingestBoard(); toast('📢 公布欄已上架'); }
+function boardOff(){ boardEnsure(); db.board.on=false; save(); ingestBoard(); toast('公布欄已下架'); }
+function ingestBoard(){
+  boardEnsure();
+  const on=!!db.board.on && db.board.slides.length>0;
+  const ov=document.getElementById('overlayView');
+  const onOverlay=ov && getComputedStyle(ov).display!=='none';
+  if(onOverlay){
+    if(on && !_boardPlaying) startBoardCarousel();
+    else if(!on && _boardPlaying) stopBoardCarousel();
+  }
+  const st=document.getElementById('boardStatus');
+  if(st) st.innerHTML = on ? '🔴 <span style="color:#37D08A">上架中</span> — 直播畫面輪播中('+db.board.slides.length+' 則)' : '⚪ <span style="color:rgba(246,241,227,.6)">已下架</span> — 直播畫面不顯示';
+  renderBoardPreview();
+}
+function startBoardCarousel(){
+  boardEnsure(); const slides=db.board.slides; if(!slides.length)return;
+  const cov=document.getElementById('boardCover'); if(!cov)return;
+  _boardPlaying=true; _boardIdx=0;
+  cov.className='board-cover show'; showBoardSlide();
+  clearInterval(_boardTimer);
+  const secs=Math.max(3,db.board.secs||8);
+  _boardTimer=setInterval(()=>{ const n=(db.board.slides||[]).length; if(!n||!db.board.on){stopBoardCarousel();return;} _boardIdx=(_boardIdx+1)%n; showBoardSlide(); }, secs*1000);
+}
+function showBoardSlide(){
+  const cov=document.getElementById('boardCover'); if(!cov)return;
+  const slides=(db.board&&db.board.slides)||[]; if(!slides.length){stopBoardCarousel();return;}
+  if(_boardIdx>=slides.length)_boardIdx=0;
+  const sl=slides[_boardIdx];
+  const dots=slides.length>1?'<div class="bd-dots">'+slides.map((_,i)=>'<span class="'+(i===_boardIdx?'on':'')+'"></span>').join('')+'</div>':'';
+  const imgHtml=sl.img?'<div class="bd-img"><img src="'+sl.img+'"></div>':'';
+  const txtHtml=sl.text?'<div class="bd-text">'+boardEsc(sl.text).replace(/\n/g,'<br>')+'</div>':'';
+  cov.innerHTML='<div class="bd-veil"></div><div class="bd-card">'+imgHtml+txtHtml+dots+'</div>';
+}
+function stopBoardCarousel(){
+  _boardPlaying=false; clearInterval(_boardTimer); _boardTimer=null;
+  const cov=document.getElementById('boardCover'); if(!cov)return;
+  cov.style.transition='opacity .4s ease'; cov.style.opacity='0';
+  setTimeout(()=>{cov.className='board-cover';cov.style.opacity='';cov.style.transition='';cov.innerHTML='';},400);
+}
+function renderBoardPreview(){
+  const box=document.getElementById('boardPreview'); if(!box)return;
+  boardEnsure(); const slides=db.board.slides;
+  if(!slides.length){ box.innerHTML='<div style="color:rgba(246,241,227,.4);font-size:13px">沒有內容可預覽</div>'; clearInterval(_previewTimer);_previewTimer=null; return; }
+  if(_previewIdx>=slides.length)_previewIdx=0;
+  const sl=slides[_previewIdx];
+  const dots=slides.length>1?'<div class="bd-dots" style="justify-content:center">'+slides.map((_,i)=>'<span class="'+(i===_previewIdx?'on':'')+'"></span>').join('')+'</div>':'';
+  const imgHtml=sl.img?'<div class="bd-img"><img src="'+sl.img+'" style="max-height:30vh"></div>':'';
+  const txtHtml=sl.text?'<div class="bd-text" style="font-size:24px">'+boardEsc(sl.text).replace(/\n/g,'<br>')+'</div>':'';
+  box.innerHTML='<div class="bd-card" style="max-width:100%;max-height:none;padding:20px 24px;gap:14px;animation:none">'+imgHtml+txtHtml+dots+'</div>';
+  if(!_previewTimer){ const secs=Math.max(3,db.board.secs||8); _previewTimer=setInterval(()=>{ const n=(db.board.slides||[]).length; if(!n){clearInterval(_previewTimer);_previewTimer=null;return;} _previewIdx=(_previewIdx+1)%n; renderBoardPreview(); }, secs*1000); }
+}
 function renderSpecialButtons(){
   const w=document.getElementById('specialBtns'); if(!w)return;
   w.innerHTML=Object.keys(SPECIAL).map(k=>'<button class="btn" style="background:#7a3b12;color:#fff" onclick="triggerSpecial(\''+k+'\')">🎴 '+SPECIAL[k].name+'</button>').join('')
@@ -2476,24 +2618,65 @@ function renderSpecialButtons(){
 }
 function triggerSpecial(k){
   if(!SPECIAL[k])return;
-  db.special={hand:k,ts:Date.now()};
+  db.special=(db.special&&typeof db.special==='object'&&!db.special.ts)?db.special:{};  // 轉成佇列物件(相容舊單筆)
+  const now=Date.now();
+  Object.keys(db.special).forEach(key=>{const e=db.special[key];if(!e||!e.ts||now-e.ts>60000)delete db.special[key];});  // 清掉過舊
+  const id=now+'_'+Math.random().toString(36).slice(2,6);
+  db.special[id]={hand:k,ts:now};
   save();
-  if(typeof toast==='function')toast('✨ 已觸發「'+SPECIAL[k].name+'」蓋板');
+  if(typeof toast==='function')toast('✨ 已排入「'+SPECIAL[k].name+'」蓋板');
 }
 function stopSpecial(){
+  _specialQueue=[]; _specialPlaying=false;
   const cov=document.getElementById('specialCover');
-  if(cov){cov.className='special-cover';cov.innerHTML='';cov.style.opacity='';cov.style.transition='';}
+  if(cov){clearTimeout(cov._t);cov.className='special-cover';cov.innerHTML='';cov.style.opacity='';cov.style.transition='';}
 }
-function playSpecialCover(k){
-  const cov=document.getElementById('specialCover'); if(!cov||!SPECIAL[k])return;
+function ingestSpecialQueue(){
+  const sp=db.special; if(!sp||typeof sp!=='object')return;
+  const now=Date.now();
+  Object.keys(sp).sort().forEach(key=>{
+    const e=sp[key];
+    if(e&&e.ts&&!_specialPlayed[key]&&now-e.ts<30000){ _specialPlayed[key]=1; if(SPECIAL[e.hand])_specialQueue.push(e.hand); }
+  });
+  if(_specialQueue.length && !_specialPlaying) playNextSpecial();
+}
+function playNextSpecial(){
+  const cov=document.getElementById('specialCover');
+  if(!cov){_specialQueue=[];_specialPlaying=false;return;}
   const ov=document.getElementById('overlayView');
-  if(ov && getComputedStyle(ov).display==='none') return;   // 非直播畫面的裝置不播、不下載
+  if(ov && getComputedStyle(ov).display==='none'){ _specialQueue=[]; _specialPlaying=false; return; }  // 非直播裝置不播
+  const k=_specialQueue.shift();
+  if(!k||!SPECIAL[k]){ _specialPlaying=false; if(_specialQueue.length)playNextSpecial(); return; }
+  _specialPlaying=true;
   cov.className='special-cover show';
-  cov.innerHTML='<div class="sc-veil"></div><div class="sc-banner"><video src="'+SPECIAL[k].file+'" autoplay muted playsinline></video></div><div class="sc-flash"></div>';
-  clearTimeout(cov._t);
-  cov._t=setTimeout(()=>{ cov.style.transition='opacity .6s ease';cov.style.opacity='0';
-    setTimeout(()=>{cov.className='special-cover';cov.style.opacity='';cov.style.transition='';cov.innerHTML='';},600); },6000);
+  cov.innerHTML='<div class="sc-veil"></div><div class="sc-banner"><video id="scVid" src="'+SPECIAL[k].file+'" autoplay muted playsinline></video></div><div class="sc-flash"></div>';
   cov.style.transition='';cov.style.opacity='1';
+  const v=cov.querySelector('#scVid');
+  const done=()=>{ clearTimeout(cov._t); cov.style.transition='opacity .5s ease';cov.style.opacity='0';
+    setTimeout(()=>{ cov.className='special-cover';cov.style.opacity='';cov.style.transition='';cov.innerHTML='';
+      if(_specialQueue.length){ playNextSpecial(); } else { _specialPlaying=false; }
+    },500); };
+  clearTimeout(cov._t);
+  cov._t=setTimeout(done,60000);
+  if(v){
+    v.onended=done;
+    v.onloadedmetadata=()=>{ if(isFinite(v.duration)&&v.duration>0){ clearTimeout(cov._t); cov._t=setTimeout(done,(v.duration+0.5)*1000); } };
+    v.onerror=()=>{ clearTimeout(cov._t); cov._t=setTimeout(done,3000); };
+  }
+}
+function renderControlSummary(){
+  const cs=document.getElementById('controlSummary'); if(!cs)return;
+  const s=curSession();
+  if(!s){cs.innerHTML='';return;}
+  const t=sessionTotals(s);
+  const r=replay(s);
+  const jc={};{const jset=new Set();r.states.forEach(st=>jset.add(Math.floor(st.passes/16)+1));jset.forEach(j=>{seatingForJiang(s,j).forEach(pid=>{jc[pid]=(jc[pid]||0)+1})});}
+  const ranked=t.map((x,i)=>({...x,i})).sort((a,b)=>b.score-a.score);
+  const leaderSeat=ranked.length?ranked[0].i:-1;
+  const cell=(v,cl)=>`<td class="${cl||''}">${v}</td>`;
+  let rows='';
+  ranked.forEach(p=>{ const sc=p.score>0?'p':p.score<0?'n':''; rows+=`<tr class="${p.i===leaderSeat?'lead':''}"><td class="nm">${nameOf(p.pid)}</td>`+cell((p.score>0?'+':'')+p.score,sc)+cell(p.zimo)+cell(p.ron)+cell(p.gun)+cell(p.mo)+cell(jc[p.pid]||0)+'</tr>'; });
+  cs.innerHTML=`<table><thead><tr><th>玩家</th><th>戰績</th><th>自摸</th><th>胡牌</th><th>放槍</th><th>被摸</th><th>將數</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 function renderScheduleEditor(){
   const el=document.getElementById('scheduleList');if(!el)return;
