@@ -172,14 +172,14 @@ body.slideshow .tile:nth-child(4){animation-delay:0s,1.8s}
 /* ── 總累積排行榜(表格式)── */
 .lb-wrap{grid-column:1/-1;display:flex;gap:18px;width:100%;max-width:1700px;margin:0 auto;align-items:flex-start}
 .lb-col{flex:1;min-width:0}
-.lb2wrap{grid-column:1/-1;display:flex;gap:22px;width:100%;max-width:1860px;margin:0 auto;height:calc(100vh - 150px);align-items:stretch}
+.lb2wrap{grid-column:1/-1;display:flex;gap:22px;width:100%;max-width:1860px;margin:0 auto;height:calc(100vh - 185px);align-items:stretch}
 .lb2wrap .lb-table{flex:1;height:100%;font-size:20px}
 .lb2wrap .lb-table th{font-size:15px;padding:10px 7px}
 .lb2wrap .lb-table td{padding:8px 7px}
 .lb2wrap .lb-table td.rk{width:56px;font-size:20px}
 .lb2wrap .lb-table td.sc{font-size:23px}
 .tiles.wide{max-width:1880px}
-.board-slide{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:calc(100vh - 140px);padding:6px 10px}
+.board-slide{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:calc(100vh - 175px);padding:6px 10px}
 .lb-table{width:100%;border-collapse:collapse;font-size:23px;background:rgba(6,10,8,.9);border-radius:10px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.4)}
 .lb-table th{background:rgba(255,255,255,.05);color:rgba(246,241,227,.65);font-weight:700;font-size:18px;padding:13px 8px;text-align:center;border-bottom:1px solid rgba(246,241,227,.18);letter-spacing:1px}
 .lb-table td{padding:14px 8px;text-align:center;border-bottom:1px solid rgba(246,241,227,.07);font-variant-numeric:tabular-nums;color:var(--ivory)}
@@ -381,7 +381,7 @@ body.greenscreen .ov-foot{display:none}
 
 <div id="idleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99998;background:#D8A94E;color:#1a1a1a;text-align:center;padding:10px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⏰ 已閒置 20 分鐘。若已打完請按「結束本場」;再閒置 10 分鐘會自動結束並歸檔。 <button class="btn" style="padding:4px 12px;margin:0 4px" onclick="endSession()">結束本場</button> <button class="btn btn-outline" style="padding:4px 12px" onclick="dismissIdle()">繼續打</button></div>
   <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v1104-1236・b69排行雙欄30+圖放大</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v1104-1330・b70排行一頁24</span></h1>
   <span id="connBadge">⚪ 初始化中…</span><span id="scoreModeBadge">純計分模式</span>
   <span id="lastWriteInfo" style="font-size:11px;color:rgba(246,241,227,.5);margin-left:8px"></span>
   <div class="tabs">
@@ -2108,7 +2108,7 @@ function renderOverlay(){
     };
     const head='<thead><tr><th>排名</th><th>玩家</th><th>總分</th><th>胡牌</th><th>自摸</th><th>放槍</th><th>被摸</th><th>將數</th></tr></thead>';
     const tbl=(rows,start)=>`<table class="lb-table">${head}<tbody>${rows.map((p,i)=>rowHtml(p,start+i)).join('')}</tbody></table>`;
-    const per=30, half=15;
+    const per=24, half=12;
     const totalPages=Math.max(1,Math.ceil(lb.length/per));
     let page=ovPage||0; if(page>=totalPages)page=0;
     const pageRows=lb.slice(page*per,page*per+per);
@@ -2130,7 +2130,7 @@ function renderOverlay(){
     pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':nx.mode==='schedule'?'接下來三週行程':nx.mode==='board'?'公布欄':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=69;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=70;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
@@ -2781,7 +2781,7 @@ function purgeExpiredSchedule(){
 setInterval(purgeExpiredSchedule,30000);
 function buildSlideSeq(){
   // 總累積榜:每 10 人一張,人數變多會自動增加頁數(無限翻頁)
-  const per=30;
+  const per=24;
   const lbCount=lifetimeLeaderboard().length;
   const pages=Math.max(1,Math.ceil(lbCount/per));
   const life=[];for(let k=0;k<pages;k++)life.push({layout:'cards',mode:'lifetime',page:k});
