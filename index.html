@@ -373,7 +373,7 @@ body.greenscreen .ov-foot{display:none}
 
 <div id="idleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99998;background:#D8A94E;color:#1a1a1a;text-align:center;padding:10px 12px;font-weight:800;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.4)">⏰ 已閒置 20 分鐘。若已打完請按「結束本場」;再閒置 10 分鐘會自動結束並歸檔。 <button class="btn" style="padding:4px 12px;margin:0 4px" onclick="endSession()">結束本場</button> <button class="btn btn-outline" style="padding:4px 12px" onclick="dismissIdle()">繼續打</button></div>
   <div class="topbar">
-  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v1103-2118・b65測試房間防呆</span></h1>
+  <h1>🀄 麻將直播記分板 <span style="font-size:11px;color:#8FD0FF;font-weight:600;vertical-align:middle">v1104-0938・b68開播前輪播</span></h1>
   <span id="connBadge">⚪ 初始化中…</span><span id="scoreModeBadge">純計分模式</span>
   <span id="lastWriteInfo" style="font-size:11px;color:rgba(246,241,227,.5);margin-left:8px"></span>
   <div class="tabs">
@@ -646,7 +646,7 @@ body.greenscreen .ov-foot{display:none}
 <div id="boardView" class="wrap" style="display:none">
   <div class="panel">
     <h2>📢 公布欄</h2>
-    <div style="font-size:13px;color:rgba(246,241,227,.7);line-height:1.6;margin-bottom:12px">上傳文字或圖片當公告，按「上架」後就會<b>一直</b>在直播畫面中央輪播，直到你按「下架」為止。</div>
+    <div style="font-size:13px;color:rgba(246,241,227,.7);line-height:1.6;margin-bottom:12px">上傳文字或圖片當公告，按「上架」後會加入「自動輪播」，休息/換將時就會跟計分卡一起輪到。（播出速度跟著「直播畫面」上的自動輪播秒數；下方秒數只管預覽）</div>
     <div id="boardStatus" style="font-size:14px;font-weight:700;margin-bottom:10px"></div>
     <div class="btnrow" style="margin-bottom:16px">
       <button class="btn" style="background:#2E8B62;color:#fff" onclick="boardOn()">📢 上架公布欄</button>
@@ -794,6 +794,7 @@ let cur={winner:null,type:null,gun:null};
 let ovMode='today';
 let ovLayout='broadcast';
 let ovPage=0;              // 總累積榜目前頁(每頁10人)
+let ovBoardIdx=0;          // 公布欄目前第幾則(在自動輪播中)
 let slideshow=false;      // 自動輪播開關
 let slideTimer=null;      // 輪播計時器
 let slideSeq=[];          // 目前輪播序列
@@ -2036,6 +2037,17 @@ function renderOverlay(){
     }
     document.getElementById('ovTitle').textContent='📅 開播行程';
     document.getElementById('ovRound').textContent='開播行程・哪幾天有開、當天有誰';
+  }else if(ovMode==='board'){
+    const _bs=(db.board&&db.board.slides)||[];
+    const _sl=_bs[ovBoardIdx]||_bs[0];
+    if(!_sl){ tiles.innerHTML='<div style="grid-column:1/-1;text-align:center;color:rgba(246,241,227,.5);font-size:28px;padding:60px">(無公告)</div>'; }
+    else{
+      const _img=_sl.img?'<div style="line-height:0;margin-bottom:26px"><img src="'+_sl.img+'" style="max-width:90%;max-height:52vh;border-radius:16px;object-fit:contain"></div>':'';
+      const _txt=_sl.text?'<div style="color:#f6f1e3;font-size:46px;font-weight:800;line-height:1.55;text-shadow:0 2px 10px rgba(0,0,0,.5)">'+boardEsc(_sl.text).replace(/\n/g,'<br>')+'</div>':'';
+      tiles.innerHTML='<div style="grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:62vh;padding:20px">'+_img+_txt+'</div>';
+    }
+    document.getElementById('ovTitle').textContent='📢 公布欄';
+    document.getElementById('ovRound').textContent='';
   }else if(ovMode==='today'&&s){
     const r=replay(s);
     const pt=playerTotals(s);              // 本場每位玩家(含換上換下)的分數
@@ -2107,7 +2119,7 @@ function renderOverlay(){
     pill.textContent='● 自動輪播中 · 下一張:'+(nx.mode==='today'?'今日戰績':nx.mode==='schedule'?'接下來三週行程':'總累積排行'+(nx.page!=null&&slideSeq.filter(x=>x.mode==='lifetime').length>1?' 第'+(nx.page+1)+'頁':''));
   }else if(pill){pill.textContent='● 自動輪播中';}
 }
-const BUILD=65;                 // 每次改版 +1,用來偵測前後台版本不一致
+const BUILD=68;                 // 每次改版 +1,用來偵測前後台版本不一致
 function checkStale(){
   const el=document.getElementById('staleBanner');if(!el)return;
   const remote=+((typeof db!=='undefined'&&db&&db.build)||0);
@@ -2564,14 +2576,8 @@ function boardOff(){ boardEnsure(); db.board.on=false; save(); ingestBoard(); to
 function ingestBoard(){
   boardEnsure();
   const on=!!db.board.on && db.board.slides.length>0;
-  const ov=document.getElementById('overlayView');
-  const onOverlay=ov && getComputedStyle(ov).display!=='none';
-  if(onOverlay){
-    if(on && !_boardPlaying) startBoardCarousel();
-    else if(!on && _boardPlaying) stopBoardCarousel();
-  }
   const st=document.getElementById('boardStatus');
-  if(st) st.innerHTML = on ? '🔴 <span style="color:#37D08A">上架中</span> — 直播畫面輪播中('+db.board.slides.length+' 則)' : '⚪ <span style="color:rgba(246,241,227,.6)">已下架</span> — 直播畫面不顯示';
+  if(st) st.innerHTML = on ? '🔴 <span style="color:#37D08A">上架中</span> — 已加入自動輪播('+db.board.slides.length+' 則)' : '⚪ <span style="color:rgba(246,241,227,.6)">已下架</span> — 不在輪播中';
   renderBoardPreview();
 }
 function startBoardCarousel(){
@@ -2605,10 +2611,10 @@ function renderBoardPreview(){
   if(!slides.length){ box.innerHTML='<div style="color:rgba(246,241,227,.4);font-size:13px">沒有內容可預覽</div>'; clearInterval(_previewTimer);_previewTimer=null; return; }
   if(_previewIdx>=slides.length)_previewIdx=0;
   const sl=slides[_previewIdx];
-  const dots=slides.length>1?'<div class="bd-dots" style="justify-content:center">'+slides.map((_,i)=>'<span class="'+(i===_previewIdx?'on':'')+'"></span>').join('')+'</div>':'';
-  const imgHtml=sl.img?'<div class="bd-img"><img src="'+sl.img+'" style="max-height:30vh"></div>':'';
-  const txtHtml=sl.text?'<div class="bd-text" style="font-size:24px">'+boardEsc(sl.text).replace(/\n/g,'<br>')+'</div>':'';
-  box.innerHTML='<div class="bd-card" style="max-width:100%;max-height:none;padding:20px 24px;gap:14px;animation:none">'+imgHtml+txtHtml+dots+'</div>';
+  const dots=slides.length>1?'<div style="display:flex;gap:8px;justify-content:center;margin-top:12px">'+slides.map((_,i)=>'<span style="width:9px;height:9px;border-radius:50%;background:'+(i===_previewIdx?'#D8A94E':'rgba(246,241,227,.3)')+'"></span>').join('')+'</div>':'';
+  const img=sl.img?'<div style="line-height:0;margin-bottom:12px"><img src="'+sl.img+'" style="max-width:100%;max-height:30vh;border-radius:10px;object-fit:contain"></div>':'';
+  const txt=sl.text?'<div style="color:#f6f1e3;font-size:24px;font-weight:800;line-height:1.5;text-align:center">'+boardEsc(sl.text).replace(/\n/g,'<br>')+'</div>':'';
+  box.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;max-width:100%">'+img+txt+dots+'</div>';
   if(!_previewTimer){ const secs=Math.max(3,db.board.secs||8); _previewTimer=setInterval(()=>{ const n=(db.board.slides||[]).length; if(!n){clearInterval(_previewTimer);_previewTimer=null;return;} _previewIdx=(_previewIdx+1)%n; renderBoardPreview(); }, secs*1000); }
 }
 function renderSpecialButtons(){
@@ -2769,13 +2775,15 @@ function buildSlideSeq(){
   const pages=Math.max(1,Math.ceil(lbCount/per));
   const life=[];for(let k=0;k<pages;k++)life.push({layout:'cards',mode:'lifetime',page:k});
   const sch=scheduleUpcoming()?[{layout:'cards',mode:'schedule'}]:[];
+  // 公布欄:上架且有內容時,每則公告當成輪播的一張
+  const bd=(db.board&&db.board.on&&(db.board.slides||[]).length)?db.board.slides.map((_,k)=>({layout:'cards',mode:'board',bidx:k})):[];
   const s=curSession();
-  // 選位子階段(開播前):今日大卡 → 總累積榜各頁 → 行程
+  // 選位子階段(開播前):公布欄 → 今日大卡 → 總累積榜各頁 → 行程
   if(slideshowAuto){
-    return s?[{layout:'cards',mode:'today'},...life,...sch]:[...life,...sch];
+    return s?[...bd,{layout:'cards',mode:'today'},...life,...sch]:[...bd,...life,...sch];
   }
-  // 手動輪播:有牌局則今日 + 總累積各頁 + 行程
-  const seq=[];
+  // 手動輪播:公布欄 → 今日 + 總累積各頁 + 行程
+  const seq=[...bd];
   if(s)seq.push({layout:'cards',mode:'today'});
   return seq.concat(life,sch);
 }
@@ -2789,7 +2797,7 @@ function slideTick(){
   slideSeq=buildSlideSeq();
   slideIdx=(slideIdx+1)%slideSeq.length;
   const sl=slideSeq[slideIdx];
-  ovLayout=sl.layout;ovMode=sl.mode;ovPage=sl.page||0;
+  ovLayout=sl.layout;ovMode=sl.mode;ovPage=sl.page||0;ovBoardIdx=sl.bidx||0;
   const cl=document.getElementById('cardsLayout');
   if(cl){cl.style.animation='none';void cl.offsetWidth;cl.style.animation='';}
   render();
@@ -2799,7 +2807,7 @@ function startSlideshow(){
   document.body.classList.add('slideshow');
   const b=document.getElementById('slideshowBtn');if(b)b.textContent='⏸ 停止輪播';
   slideSeq=buildSlideSeq();slideIdx=0;
-  const sl=slideSeq[slideIdx];ovLayout=sl.layout;ovMode=sl.mode;ovPage=sl.page||0;
+  const sl=slideSeq[slideIdx];ovLayout=sl.layout;ovMode=sl.mode;ovPage=sl.page||0;ovBoardIdx=sl.bidx||0;
   ensureSlideTimer();
   render();
 }
@@ -2818,8 +2826,11 @@ function manualView(layout,mode){
 }
 /* 依資料狀態自動接管:選位子階段 → 輪播;座位確定 → 切回實況版面 */
 function syncAutoSlideshow(){
-  const boundary=awaitingSeating(curSession());
+  const _s=curSession();
+  const boundary=!_s||awaitingSeating(_s);   // 開播前(還沒建立牌局)或換將選位子階段 → 自動輪播
   if(boundary){
+    const seq=buildSlideSeq();
+    if(!seq.length){ if(slideshowAuto)stopSlideshow(); return false; }  // 真的沒東西可輪 → 維持「即將開播」提示
     slideshowAuto=true;
     if(!slideshow){
       slideshow=true;slideIdx=0;
@@ -2827,9 +2838,9 @@ function syncAutoSlideshow(){
       const b=document.getElementById('slideshowBtn');if(b)b.textContent='⏸ 停止輪播';
       ensureSlideTimer();
     }
-    slideSeq=buildSlideSeq();
+    slideSeq=seq;
     if(slideIdx>=slideSeq.length)slideIdx=0;
-    ovLayout='cards';ovMode=slideSeq[slideIdx].mode;ovPage=slideSeq[slideIdx].page||0;
+    ovLayout='cards';ovMode=slideSeq[slideIdx].mode;ovPage=slideSeq[slideIdx].page||0;ovBoardIdx=slideSeq[slideIdx].bidx||0;
     return true;
   }
   if(slideshowAuto){          // 剛離開選位子階段(座位已確定)→ 回實況版面
